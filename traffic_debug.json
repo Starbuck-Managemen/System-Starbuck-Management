@@ -1,0 +1,22 @@
+{
+  "traffic": [
+    {
+      "$$path": "/interface",
+      "name": "bridge1-hostpot",
+      "rxPacketsPerSecond": 67,
+      "rxBitsPerSecond": 144736,
+      "fpRxPacketsPerSecond": 47,
+      "fpRxBitsPerSecond": 132544,
+      "rxDropsPerSecond": 0,
+      "rxErrorsPerSecond": 0,
+      "txPacketsPerSecond": 132,
+      "txBitsPerSecond": 912680,
+      "fpTxPacketsPerSecond": 0,
+      "fpTxBitsPerSecond": 0,
+      "txDropsPerSecond": 0,
+      "txQueueDropsPerSecond": 0,
+      "txErrorsPerSecond": 0
+    }
+  ],
+  "interfaceName": "bridge1-hostpot"
+}

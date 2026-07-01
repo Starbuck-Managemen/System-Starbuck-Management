@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  username      String?   @unique
+  email         String?   @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  role          String    @default("USER")
+  status        String    @default("Active")
+  accounts      Account[]
+  sessions      Session[]
+  orders        Order[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Voucher {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  price     Float    @default(0)
+  status    String   @default("Active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Router {
+  id        String   @id @default(cuid())
+  name      String
+  host      String   // IP Address or VPN Host (e.g. id-1.mikhmon.online)
+  apiPort   Int      @default(8728)
+  username  String   @default("admin")
+  password  String   @default("")
+  status    String   @default("Offline")
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  routerId  String
+  name      String   // Nama profile di MikroTik (e.g. 1-BULAN)
+  price     Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([routerId, name]) // Satu router hanya bisa punya satu harga untuk nama profil tertentu
+}
+
+model Transaction {
+  id          String    @id @default(cuid())
+  amount      Float     @default(0)
+  type        String    @default("Income")
+  username    String?   // ID or Username of the voucher
+  voucherType String?   // Profile (e.g. 1 Jam, Bulanan)
+  activeAt    DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Order {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routerId    String
+  router      Router   @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  packageName String   // e.g., "1 Jam", "1 Bulan"
+  price       Float    @default(0)
+  status      String   @default("PENDING") // PENDING, PROCESSED, REJECTED
+  voucherCode String?  // Code provided by admin when PROCESSED
+  isRead      Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
