@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { FileText, Wallet, Calendar, Ticket, Search, ChevronDown, Download, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { createPortal } from 'react-dom'
 import * as XLSX from 'xlsx'
 
 // Custom Transparent Select Component
@@ -166,7 +167,13 @@ export default function ReportClient({ summary, chartData, transactions, registe
   }, [searchMonth]);
 
   // Export State
+  const [mounted, setMounted] = useState(false)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
   const [exportStartMonth, setExportStartMonth] = useState(currentMonthStr)
   const [exportEndMonth, setExportEndMonth] = useState(currentMonthStr)
@@ -536,8 +543,8 @@ export default function ReportClient({ summary, chartData, transactions, registe
       </div>
 
       {/* Export Modal */}
-      {isExportModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      {isExportModalOpen && mounted && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-[#1E293B] border border-slate-700 rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-5 border-b border-slate-700/50 bg-slate-800/50">
               <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
@@ -586,7 +593,8 @@ export default function ReportClient({ summary, chartData, transactions, registe
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
