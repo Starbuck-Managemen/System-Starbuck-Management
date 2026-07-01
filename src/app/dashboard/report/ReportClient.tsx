@@ -427,14 +427,12 @@ export default function ReportClient({ summary, chartData, transactions, registe
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex items-center gap-2">
               <label className="text-slate-300 text-sm font-medium w-16 sm:w-auto">Dari:</label>
-            <input 
-              type="date" 
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="bg-slate-900/60 border border-slate-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark]"
-            />
-          </div>
-
+              <input 
+                type="date" 
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full sm:w-auto bg-slate-900/60 border border-slate-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark]"
+              />
             </div>
   
             <div className="flex items-center gap-2">
@@ -443,7 +441,7 @@ export default function ReportClient({ summary, chartData, transactions, registe
                 type="date" 
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full bg-slate-900/60 border border-slate-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark]"
+                className="w-full sm:w-auto bg-slate-900/60 border border-slate-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark]"
               />
             </div>
           </div>
