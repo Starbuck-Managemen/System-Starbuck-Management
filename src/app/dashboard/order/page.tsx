@@ -28,7 +28,7 @@ export default async function UserOrderPage() {
   // Get the first router to serve as the default source for profiles
   const defaultRouter = await prisma.router.findFirst()
 
-  let profiles = []
+  let profiles: any[] = []
   if (defaultRouter) {
     profiles = await prisma.profile.findMany({
       where: { routerId: defaultRouter.id }
