@@ -197,7 +197,7 @@ export function OrdersTable({ initialOrders, routers }: { initialOrders: any[], 
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left border-collapse whitespace-nowrap">
+      <table className="w-full text-left border-collapse whitespace-nowrap [&_th]:whitespace-nowrap [&_td]:whitespace-nowrap">
         <thead className="bg-[#0b1220] text-slate-400 text-xs text-left border-b border-slate-700/50">
           <tr>
             <th className="p-4 font-semibold w-[200px]">User</th>

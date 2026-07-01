@@ -35,7 +35,7 @@ export default async function RouterPage() {
       {/* Table Section */}
       <div className="bg-[#1E293B] rounded-xl border border-slate-800 shadow-sm overflow-hidden flex-1">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-400 whitespace-nowrap">
+          <table className="w-full text-left text-sm text-slate-400 whitespace-nowrap [&_th]:whitespace-nowrap [&_td]:whitespace-nowrap">
             <thead className="bg-[#0F172A] text-xs uppercase text-slate-300 font-semibold border-b border-slate-800">
               <tr>
                 <th scope="col" className="px-6 py-4">Nama Router</th>
