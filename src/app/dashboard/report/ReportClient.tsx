@@ -422,10 +422,11 @@ export default function ReportClient({ summary, chartData, transactions, registe
       {/* Transaction Table (Mikhmon Style) */}
       <div className="bg-[#343A40] rounded-xl border border-[#454D55] overflow-hidden mt-8 shadow-xl">
         {/* Top Filter Bar */}
-        <div className="flex flex-wrap items-center gap-4 bg-[#343A40] p-4 border-b border-[#454D55]">
+        <div className="flex flex-col xl:flex-row flex-wrap items-stretch xl:items-center gap-4 bg-[#343A40] p-4 border-b border-[#454D55]">
           
-          <div className="flex items-center gap-2">
-            <label className="text-slate-300 text-sm font-medium">Dari:</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-slate-300 text-sm font-medium w-16 sm:w-auto">Dari:</label>
             <input 
               type="date" 
               value={startDate}
@@ -434,25 +435,28 @@ export default function ReportClient({ summary, chartData, transactions, registe
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-slate-300 text-sm font-medium">Sampai:</label>
-            <input 
-              type="date" 
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="bg-slate-900/60 border border-slate-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark]"
-            />
+            </div>
+  
+            <div className="flex items-center gap-2">
+              <label className="text-slate-300 text-sm font-medium w-16 sm:w-auto">Sampai:</label>
+              <input 
+                type="date" 
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full bg-slate-900/60 border border-slate-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 [color-scheme:dark]"
+              />
+            </div>
           </div>
 
           <CustomSelect 
-            className="w-48"
+            className="w-full sm:w-48"
             value={filterProfile}
             onChange={setFilterProfile}
             options={profileOptions}
           />
           
-          <div className="flex-1 min-w-[200px] flex justify-end">
-            <div className="relative">
+          <div className="flex-1 w-full lg:w-auto flex justify-end">
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input 
                 type="text"
@@ -460,26 +464,28 @@ export default function ReportClient({ summary, chartData, transactions, registe
                 value={searchMonth}
                 onChange={(e) => setSearchMonth(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleFilter()}
-                className="bg-slate-900/60 border border-slate-700 text-white pl-9 pr-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full lg:w-64 [color-scheme:dark]"
+                className="bg-slate-900/60 border border-slate-700 text-white pl-9 pr-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full [color-scheme:dark]"
               />
             </div>
           </div>
 
-          <button onClick={handleFilter} className="flex items-center gap-1.5 bg-[#343A40] hover:bg-[#454D55] border border-[#454D55] text-base px-6 py-2.5 rounded-lg transition-colors text-white shadow">
-            Terapkan
-          </button>
-          
-          <button onClick={() => setIsExportModalOpen(true)} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-base px-5 py-2.5 rounded-lg transition-colors text-white shadow font-semibold">
-            <Download className="w-4 h-4" /> Unduh Excel
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+            <button onClick={handleFilter} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-[#343A40] hover:bg-[#454D55] border border-[#454D55] text-base px-6 py-2.5 rounded-lg transition-colors text-white shadow">
+              Terapkan
+            </button>
+            
+            <button onClick={() => setIsExportModalOpen(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-base px-5 py-2.5 rounded-lg transition-colors text-white shadow font-semibold">
+              <Download className="w-4 h-4" /> Unduh Excel
+            </button>
+          </div>
         </div>
 
         {/* Table Header / Summary */}
-        <div className="flex justify-between items-center px-5 py-4 border-b border-[#454D55] bg-[#3A4047]">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-5 py-4 border-b border-[#454D55] bg-[#3A4047]">
           <h2 className="font-bold text-base text-white">{reportTitle}</h2>
-          <div className="flex items-center gap-12 font-bold text-base text-white">
-            <span>Total Pendapatan Terfilter</span>
-            <span>Rp {totalIncome.toLocaleString('id-ID')}</span>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-12 font-bold text-base text-white">
+            <span className="text-slate-300 text-sm sm:text-base">Total Pendapatan Terfilter</span>
+            <span className="text-xl sm:text-base text-emerald-400 sm:text-white">Rp {totalIncome.toLocaleString('id-ID')}</span>
           </div>
         </div>
 
