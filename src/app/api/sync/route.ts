@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import prisma from "@/lib/prisma"
 import { getLiveReportSummary } from "@/app/dashboard/report/actions"
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   try {
     const routers = await prisma.router.findMany()
