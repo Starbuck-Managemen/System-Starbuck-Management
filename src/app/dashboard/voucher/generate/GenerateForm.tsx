@@ -12,12 +12,14 @@ export function GenerateForm({
   routers, 
   servers, 
   profiles, 
-  selectedRouterId 
+  selectedRouterId,
+  onVouchersGenerated 
 }: { 
   routers: any[], 
   servers: any[], 
   profiles: any[], 
-  selectedRouterId: string 
+  selectedRouterId: string,
+  onVouchersGenerated?: (vouchers: string) => void
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -116,13 +118,14 @@ export function GenerateForm({
           </div>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 mt-4">
           <button 
             onClick={() => setGeneratedVouchers(null)}
             className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-medium py-3 px-4 rounded-xl transition-colors border border-slate-700"
           >
             Generate Lagi
           </button>
+          
           <a 
             href={`/dashboard/voucher/print?routerId=${selectedRouterId}&batchId=${generatedVouchers.batchId}`}
             target="_blank"
@@ -132,6 +135,15 @@ export function GenerateForm({
             <Printer className="w-5 h-5" /> Cetak Voucher
           </a>
         </div>
+        
+        {onVouchersGenerated && (
+          <button 
+            onClick={() => onVouchersGenerated(generatedVouchers.vouchers.join('\n'))}
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg mt-4"
+          >
+            <ClipboardList className="w-5 h-5" /> Gunakan untuk Orderan Saat Ini
+          </button>
+        )}
       </div>
     )
   }

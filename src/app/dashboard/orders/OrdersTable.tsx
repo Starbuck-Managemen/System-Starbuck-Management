@@ -459,6 +459,15 @@ export function OrdersTable({ initialOrders, routers }: { initialOrders: any[], 
             isOpen={isGenerateModalOpen} 
             onClose={() => setIsGenerateModalOpen(false)} 
             routers={routers} 
+            onVouchersGenerated={(vouchersText) => {
+              if (textInput) {
+                setTextInput(textInput + '\n' + vouchersText)
+              } else {
+                setTextInput(vouchersText)
+              }
+              setIsGenerateModalOpen(false)
+              toast.success("Voucher berhasil di-paste ke kolom orderan!")
+            }}
           />
         </Suspense>
       )}

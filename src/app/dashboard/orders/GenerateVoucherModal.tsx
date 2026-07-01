@@ -10,11 +10,13 @@ import { useSearchParams } from "next/navigation"
 export function GenerateVoucherModal({ 
   isOpen, 
   onClose,
-  routers
+  routers,
+  onVouchersGenerated
 }: { 
   isOpen: boolean
   onClose: () => void
   routers: any[]
+  onVouchersGenerated?: (vouchers: string) => void
 }) {
   const searchParams = useSearchParams()
   const urlRouterId = searchParams.get('routerId')
@@ -90,6 +92,7 @@ export function GenerateVoucherModal({
               servers={servers}
               profiles={profiles}
               selectedRouterId={selectedRouterId}
+              onVouchersGenerated={onVouchersGenerated}
             />
           )}
         </div>
