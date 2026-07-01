@@ -321,7 +321,7 @@ export function VoucherTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm text-slate-400">
+        <table className="w-full text-left text-sm text-slate-400 whitespace-nowrap">
           <thead className="bg-[#0F172A] text-xs uppercase text-slate-300 font-semibold border-b border-slate-800">
             <tr>
               <th scope="col" className="px-6 py-4 w-[60px] text-center">No.</th>

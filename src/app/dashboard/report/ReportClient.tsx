@@ -393,8 +393,8 @@ export default function ReportClient({ summary, chartData, transactions, registe
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-base text-left">
+        <div className="overflow-x-auto pb-4">
+          <table className="w-full text-base text-left whitespace-nowrap">
             <thead className="text-[#E9ECEF] font-semibold border-b border-[#454D55]">
               <tr>
                 <th className="px-5 py-3 w-12">№</th>
