@@ -51,7 +51,7 @@ export async function GET(request: Request) {
             let waNumber = "";
             if (comment.includes("WA:")) {
               const parts = comment.split("|");
-              parts.forEach(p => {
+              parts.forEach((p: string) => {
                 if (p.startsWith("WA:")) waNumber = p.substring(3);
               });
             }
