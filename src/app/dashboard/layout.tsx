@@ -5,6 +5,7 @@ import { UserNav } from "@/components/UserNav"
 import { Breadcrumb } from "@/components/Breadcrumb"
 import { Clock } from "@/components/Clock"
 import { NotificationBell } from "@/components/NotificationBell"
+import { MobileSidebar } from "@/components/MobileSidebar"
 import { Toaster } from "sonner"
 
 import prisma from "@/lib/prisma"
@@ -133,9 +134,11 @@ export default async function DashboardLayout({
         <header className="flex h-20 items-center justify-between bg-[#1E293B] px-4 md:px-8 border-b border-slate-800 shadow-sm shrink-0 print:hidden">
           
           <div className="flex items-center gap-4">
-            <button className="md:hidden text-slate-400 hover:text-slate-50">
-              <Menu className="h-6 w-6" />
-            </button>
+            <MobileSidebar 
+              dbUser={dbUser} 
+              pendingOrdersCount={pendingOrdersCount} 
+              unreadOrdersCount={unreadOrdersCount} 
+            />
             <div className="hidden md:flex text-[13px] font-medium text-slate-400">
               <Breadcrumb />
             </div>
