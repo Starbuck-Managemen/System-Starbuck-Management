@@ -174,9 +174,22 @@ export default function ReportClient({ summary, chartData, transactions, registe
     setMounted(true)
   }, [])
 
-  const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+  const currentYearStr = new Date().getFullYear().toString()
+  const currentMonthStr = `${currentYearStr}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
   const [exportStartMonth, setExportStartMonth] = useState(currentMonthStr)
   const [exportEndMonth, setExportEndMonth] = useState(currentMonthStr)
+
+  // Generate month options for the dropdown (Jan-Dec of current year)
+  const monthOptions = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ].map((m, idx) => {
+    const monthNum = String(idx + 1).padStart(2, '0')
+    return {
+      value: `${currentYearStr}-${monthNum}`,
+      label: `${m} ${currentYearStr}`
+    }
+  })
 
   const handleExportExcel = () => {
     if (!exportStartMonth || !exportEndMonth) return;
@@ -558,23 +571,21 @@ export default function ReportClient({ summary, chartData, transactions, registe
             <div className="p-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1">Mulai Bulan</label>
-                <input 
-                  type="month" 
+                <CustomSelect 
                   value={exportStartMonth}
-                  onChange={(e) => setExportStartMonth(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-slate-700 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
+                  onChange={setExportStartMonth}
+                  options={monthOptions}
                 />
               </div>
-              <div>
+              <div className="pt-2">
                 <label className="block text-sm font-medium text-slate-300 mb-1">Sampai Bulan</label>
-                <input 
-                  type="month" 
+                <CustomSelect 
                   value={exportEndMonth}
-                  onChange={(e) => setExportEndMonth(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-slate-700 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
+                  onChange={setExportEndMonth}
+                  options={monthOptions}
                 />
               </div>
-              <p className="text-xs text-slate-400 mt-2 bg-slate-800/50 p-3 rounded-lg border border-slate-700/30">
+              <p className="text-xs text-slate-400 mt-4 bg-slate-800/50 p-3 rounded-lg border border-slate-700/30">
                 Laporan akan merangkum seluruh transaksi (pendapatan voucher) dalam rentang bulan yang Anda pilih di atas.
               </p>
             </div>
