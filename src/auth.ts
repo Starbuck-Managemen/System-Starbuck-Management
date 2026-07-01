@@ -3,7 +3,6 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import prisma from "@/lib/prisma"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { authConfig } from "./auth.config"
-import { randomUUID } from "crypto"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -31,7 +30,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         if (user.password === credentials.password) {
-            const sessionToken = randomUUID();
+            const sessionToken = crypto.randomUUID();
             const updatedUser = await prisma.user.update({
               where: { id: user.id },
               data: {

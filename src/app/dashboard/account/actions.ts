@@ -53,6 +53,15 @@ export async function updateAccount(prevState: any, formData: FormData) {
 
   // If password was changed, we log them out. MUST be outside try/catch!
   if (password && password.trim().length >= 6) {
+    // Clear session in DB before signing out
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        lastActive: new Date(0),
+        currentSessionToken: null
+      }
+    })
+
     // signOut throws a NEXT_REDIRECT error which is handled by Next.js
     await signOut({ redirectTo: '/login' })
   }
