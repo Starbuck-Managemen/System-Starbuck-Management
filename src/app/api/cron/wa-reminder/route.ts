@@ -63,7 +63,7 @@ export async function GET(request: Request) {
             let lastRemindedMs = 0;
             if (comment.includes("REMINDED:")) {
               const parts = comment.split("|");
-              parts.forEach(p => {
+              parts.forEach((p: string) => {
                 if (p.startsWith("REMINDED:")) {
                   lastRemindedMs = parseInt(p.substring(9));
                 }
