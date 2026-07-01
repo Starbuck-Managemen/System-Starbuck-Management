@@ -91,7 +91,7 @@ export default async function UserManagementPage({
                   </td>
                   <td className="py-4 px-6">
                     <div className="flex justify-center">
-                      {user.email === session?.user?.email ? (
+                      {user.status === 'Active' ? (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-green-900/30 px-3 py-1.5 text-[11px] font-bold text-green-400 border border-green-800/50">
                           <span className="h-1.5 w-1.5 rounded-full bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.5)]"></span>
                           Active
@@ -99,7 +99,7 @@ export default async function UserManagementPage({
                       ) : (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-red-900/30 px-3 py-1.5 text-[11px] font-bold text-red-400 border border-red-800/50">
                           <span className="h-1.5 w-1.5 rounded-full bg-red-400 shadow-[0_0_5px_rgba(248,113,113,0.5)]"></span>
-                          Non Active
+                          {user.status || 'Non Active'}
                         </span>
                       )}
                     </div>
