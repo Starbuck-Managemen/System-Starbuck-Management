@@ -17,13 +17,15 @@ model User {
   emailVerified DateTime?
   password      String?
   image         String?
-  role          String    @default("USER")
-  status        String    @default("Active")
-  accounts      Account[]
-  sessions      Session[]
-  orders        Order[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role                String    @default("USER")
+  status              String    @default("Active")
+  currentSessionToken String?
+  lastActive          DateTime?
+  accounts            Account[]
+  sessions            Session[]
+  orders              Order[]
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }
 
 model Account {

@@ -67,10 +67,14 @@ export default async function UserManagementPage({
               </tr>
             </thead>
             <tbody className="text-[13px] text-slate-200">
-              {users.map((user) => (
+              {users.map((user) => {
+                const now = new Date()
+                const isOnline = user.lastActive && (now.getTime() - new Date(user.lastActive).getTime() < 3 * 60 * 1000)
+                
+                return (
                 <tr key={user.id} className="border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors">
                   <td className="py-4 px-6 flex justify-center">
-                    <div className="h-10 w-10 rounded-full bg-[#0F172A] border-2 border-blue-500 flex items-center justify-center overflow-hidden shrink-0">
+                    <div className="relative h-10 w-10 rounded-full bg-[#0F172A] border-2 border-blue-500 flex items-center justify-center overflow-hidden shrink-0">
                       {user.image ? (
                         <img src={user.image} alt={user.name || "User"} className="h-full w-full object-cover" />
                       ) : (
@@ -91,15 +95,15 @@ export default async function UserManagementPage({
                   </td>
                   <td className="py-4 px-6">
                     <div className="flex justify-center">
-                      {user.status === 'Active' ? (
+                      {isOnline ? (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-green-900/30 px-3 py-1.5 text-[11px] font-bold text-green-400 border border-green-800/50">
                           <span className="h-1.5 w-1.5 rounded-full bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.5)]"></span>
-                          Active
+                          Online
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-900/30 px-3 py-1.5 text-[11px] font-bold text-red-400 border border-red-800/50">
-                          <span className="h-1.5 w-1.5 rounded-full bg-red-400 shadow-[0_0_5px_rgba(248,113,113,0.5)]"></span>
-                          {user.status || 'Non Active'}
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-400 border border-slate-700">
+                          <span className="h-1.5 w-1.5 rounded-full bg-slate-500"></span>
+                          Offline
                         </span>
                       )}
                     </div>
@@ -138,7 +142,7 @@ export default async function UserManagementPage({
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

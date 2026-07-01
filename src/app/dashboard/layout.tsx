@@ -7,6 +7,8 @@ import { Clock } from "@/components/Clock"
 import { NotificationBell } from "@/components/NotificationBell"
 import { MobileSidebar } from "@/components/MobileSidebar"
 import { Toaster } from "sonner"
+import { SessionPing } from "@/components/SessionPing"
+import { ForceLogout } from "@/components/ForceLogout"
 
 import prisma from "@/lib/prisma"
 
@@ -27,6 +29,12 @@ export default async function DashboardLayout({
     dbUser = await prisma.user.findFirst({
       where: { username: session.user.name }
     })
+  }
+
+  if (dbUser && session?.user && (session.user as any).sessionToken) {
+    if (dbUser.currentSessionToken !== (session.user as any).sessionToken) {
+      return <ForceLogout message="Sesi Anda berakhir karena akun Anda baru saja login di perangkat lain." />
+    }
   }
   
   let pendingOrdersCount = 0
@@ -160,8 +168,9 @@ export default async function DashboardLayout({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 print:overflow-visible print:p-0 print:h-auto print:block">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-[#0F172A] p-4 lg:p-8 print:overflow-visible print:p-0 print:h-auto print:block">
           {children}
+          <SessionPing />
         </main>
       </div>
     </div>
