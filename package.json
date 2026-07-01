@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "concurrently \"node wa-server.js\" \"next dev\"",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "concurrently \"node wa-server.js\" \"next start\"",
     "lint": "next lint"
   },
