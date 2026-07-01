@@ -11,13 +11,18 @@ interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  customerName?: string;
 }
 
 export function OrderForm({ user, profiles, routerId }: { user: any, profiles: any[], routerId: string | undefined }) {
   const [isPending, setIsPending] = useState(false)
   const [selectedProfileId, setSelectedProfileId] = useState<string>("")
   const [quantity, setQuantity] = useState<number>(1)
+  const [customerName, setCustomerName] = useState<string>("")
   const [cart, setCart] = useState<CartItem[]>([])
+  
+  const selectedProfile = profiles.find(p => p.id === selectedProfileId)
+  const isMonthly = selectedProfile?.name.toLowerCase().includes("bulan")
   
   const router = useRouter()
 
@@ -26,22 +31,32 @@ export function OrderForm({ user, profiles, routerId }: { user: any, profiles: a
     const profile = profiles.find(p => p.id === selectedProfileId)
     if (!profile) return
     if (quantity < 1) return
+    
+    if (isMonthly && !customerName.trim()) {
+      toast.error("Nama pelanggan wajib diisi untuk pesanan bulanan!")
+      return
+    }
+
+    const trimmedName = customerName.trim()
 
     // Check if already in cart
-    const existing = cart.find(item => item.profileId === selectedProfileId)
-    if (existing) {
-      setCart(cart.map(item => item.profileId === selectedProfileId ? { ...item, quantity: item.quantity + quantity } : item))
+    const existingIndex = cart.findIndex(item => item.profileId === selectedProfileId && item.customerName === trimmedName)
+    if (existingIndex !== -1) {
+      const newCart = [...cart]
+      newCart[existingIndex].quantity += quantity
+      setCart(newCart)
     } else {
-      setCart([...cart, { profileId: profile.id, name: profile.name, price: profile.price, quantity }])
+      setCart([...cart, { profileId: profile.id, name: profile.name, price: profile.price, quantity, customerName: trimmedName }])
     }
     
     // Reset inputs
     setSelectedProfileId("")
     setQuantity(1)
+    setCustomerName("")
   }
 
-  const handleRemoveFromCart = (profileId: string) => {
-    setCart(cart.filter(item => item.profileId !== profileId))
+  const handleRemoveFromCart = (indexToRemove: number) => {
+    setCart(cart.filter((_, index) => index !== indexToRemove))
   }
 
   const totalPrice = cart.reduce((total, item) => total + (item.price * item.quantity), 0)
@@ -59,8 +74,8 @@ export function OrderForm({ user, profiles, routerId }: { user: any, profiles: a
 
     setIsPending(true)
     
-    // Format package names: "1-JAM (x10), 1-BULAN (x2)"
-    const packageString = cart.map(item => `${item.name} (x${item.quantity})`).join(', ')
+    // Format package names: "1-JAM (x10), 1-BULAN [Nama: Budi] (x2)"
+    const packageString = cart.map(item => `${item.name}${item.customerName ? ` [Nama: ${item.customerName}]` : ''} (x${item.quantity})`).join(', ')
 
     const formData = new FormData()
     formData.append('userId', user.id)
@@ -74,7 +89,7 @@ export function OrderForm({ user, profiles, routerId }: { user: any, profiles: a
         toast.success(result.message)
         
         // Format Pesan WA
-        let itemsText = cart.map(item => `- ${item.name}: ${item.quantity} Voucher`).join('\n')
+        let itemsText = cart.map(item => `- ${item.name}${item.customerName ? ` (Nama: ${item.customerName})` : ''}: ${item.quantity} Voucher`).join('\n')
         const text = `Halo Admin, saya *${user.name}* (@${user.username}) ingin memesan voucher berikut:\n\n${itemsText}\n\n*Total Tagihan: Rp ${totalPrice}*\nMohon segera diproses!`
         const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`
         window.open(waUrl, '_blank')
@@ -110,6 +125,20 @@ export function OrderForm({ user, profiles, routerId }: { user: any, profiles: a
               ))}
             </select>
           </div>
+          
+          {isMonthly && (
+            <div className="w-full">
+              <label className="text-xs font-semibold text-slate-400 mb-1.5 ml-1 block">Nama Pemilik Voucher <span className="text-red-500">*</span></label>
+              <input 
+                type="text" 
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="w-full bg-[#1E293B] border border-slate-700 h-11 px-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-lg text-sm text-slate-200 placeholder-slate-500"
+                placeholder="Contoh: Budi, Kamar 01, dll"
+              />
+            </div>
+          )}
+
           <div className="w-full">
             <label className="text-xs font-semibold text-slate-400 mb-1.5 ml-1 block">Jumlah Voucher</label>
             <input 
@@ -146,14 +175,17 @@ export function OrderForm({ user, profiles, routerId }: { user: any, profiles: a
               </div>
             ) : (
               cart.map((item, index) => (
-                <div key={index} className="flex justify-between items-center p-2 rounded-lg hover:bg-[#0b1220]/50 group">
+                <div key={index} className="flex justify-between items-center p-2 rounded-lg hover:bg-[#0b1220]/50 group transition-colors">
                   <div className="flex flex-col">
-                    <span className="font-bold text-slate-200 text-sm">{item.name}</span>
+                    <span className="font-bold text-slate-200 text-sm">
+                      {item.name}
+                      {item.customerName && <span className="text-blue-400 font-medium ml-1">[{item.customerName}]</span>}
+                    </span>
                     <span className="text-xs text-slate-500">{item.quantity}x @ Rp {item.price}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-bold text-slate-300 text-sm">Rp {item.price * item.quantity}</span>
-                    <button type="button" onClick={() => handleRemoveFromCart(item.profileId)} className="text-slate-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button type="button" onClick={() => handleRemoveFromCart(index)} className="text-slate-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
