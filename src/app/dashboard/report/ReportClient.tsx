@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { FileText, Wallet, Calendar, Ticket, Search, ChevronDown } from 'lucide-react'
+import { FileText, Wallet, Calendar, Ticket, Search, ChevronDown, Download, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import * as XLSX from 'xlsx'
 
 // Custom Transparent Select Component
 function CustomSelect({ 
@@ -163,6 +164,73 @@ export default function ReportClient({ summary, chartData, transactions, registe
       setEndDate(getLocalYYYYMMDD(last));
     }
   }, [searchMonth]);
+
+  // Export State
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+  const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+  const [exportStartMonth, setExportStartMonth] = useState(currentMonthStr)
+  const [exportEndMonth, setExportEndMonth] = useState(currentMonthStr)
+
+  const handleExportExcel = () => {
+    if (!exportStartMonth || !exportEndMonth) return;
+
+    // Convert YYYY-MM to Date objects for filtering
+    const [startYear, startMonth] = exportStartMonth.split('-');
+    const start = new Date(parseInt(startYear), parseInt(startMonth) - 1, 1);
+    
+    const [endYear, endMonth] = exportEndMonth.split('-');
+    const end = new Date(parseInt(endYear), parseInt(endMonth), 0, 23, 59, 59, 999); // last day of month
+
+    const filteredForExport = transactions.filter(tx => {
+      const txDate = new Date(tx.createdAt).getTime();
+      return txDate >= start.getTime() && txDate <= end.getTime();
+    });
+
+    if (filteredForExport.length === 0) {
+      alert("Tidak ada data pada rentang bulan tersebut.");
+      return;
+    }
+
+    const exportData = filteredForExport.map((tx, idx) => {
+      const activeDate = tx.activeAt ? new Date(tx.activeAt) : new Date(tx.createdAt);
+      const expiresDate = tx.expiresAt ? new Date(tx.expiresAt) : null;
+      
+      const formatDateTime = (d: Date | null) => {
+        if (!d) return '-';
+        return d.toLocaleString('id-ID', {
+          day: '2-digit', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+      };
+
+      return {
+        "No": idx + 1,
+        "Username": tx.username || '-',
+        "Tanggal Aktif": formatDateTime(activeDate),
+        "Tanggal Kedaluwarsa": formatDateTime(expiresDate),
+        "Profil": tx.voucherType || '-',
+        "Pendapatan (Rp)": tx.amount
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Keuangan");
+    
+    // Calculate totals
+    const totalRow = {
+      "No": "",
+      "Username": "",
+      "Tanggal Aktif": "",
+      "Tanggal Kedaluwarsa": "",
+      "Profil": "TOTAL PENDAPATAN",
+      "Pendapatan (Rp)": filteredForExport.reduce((sum, tx) => sum + tx.amount, 0)
+    };
+    XLSX.utils.sheet_add_json(worksheet, [totalRow], { skipHeader: true, origin: -1 });
+
+    XLSX.writeFile(workbook, `Laporan_Keuangan_BuckNet_${exportStartMonth}_sampai_${exportEndMonth}.xlsx`);
+    setIsExportModalOpen(false);
+  }
 
   // Applied Filters
   const [appliedFilters, setAppliedFilters] = useState({
@@ -381,6 +449,10 @@ export default function ReportClient({ summary, chartData, transactions, registe
           <button onClick={handleFilter} className="flex items-center gap-1.5 bg-[#343A40] hover:bg-[#454D55] border border-[#454D55] text-base px-6 py-2.5 rounded-lg transition-colors text-white shadow">
             Terapkan
           </button>
+          
+          <button onClick={() => setIsExportModalOpen(true)} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-base px-5 py-2.5 rounded-lg transition-colors text-white shadow font-semibold">
+            <Download className="w-4 h-4" /> Unduh Excel
+          </button>
         </div>
 
         {/* Table Header / Summary */}
@@ -462,6 +534,60 @@ export default function ReportClient({ summary, chartData, transactions, registe
           </table>
         </div>
       </div>
+
+      {/* Export Modal */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1E293B] border border-slate-700 rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-5 border-b border-slate-700/50 bg-slate-800/50">
+              <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <Download className="w-5 h-5 text-emerald-400" />
+                Export Laporan ke Excel
+              </h3>
+              <button onClick={() => setIsExportModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Mulai Bulan</label>
+                <input 
+                  type="month" 
+                  value={exportStartMonth}
+                  onChange={(e) => setExportStartMonth(e.target.value)}
+                  className="w-full bg-[#0F172A] border border-slate-700 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Sampai Bulan</label>
+                <input 
+                  type="month" 
+                  value={exportEndMonth}
+                  onChange={(e) => setExportEndMonth(e.target.value)}
+                  className="w-full bg-[#0F172A] border border-slate-700 text-white px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 [color-scheme:dark]"
+                />
+              </div>
+              <p className="text-xs text-slate-400 mt-2 bg-slate-800/50 p-3 rounded-lg border border-slate-700/30">
+                Laporan akan merangkum seluruh transaksi (pendapatan voucher) dalam rentang bulan yang Anda pilih di atas.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-3 p-5 border-t border-slate-700/50 bg-slate-800/30">
+              <button 
+                onClick={() => setIsExportModalOpen(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700 transition-colors"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={handleExportExcel}
+                className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition-colors shadow"
+              >
+                <Download className="w-4 h-4" /> Download .xlsx
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
