@@ -174,7 +174,6 @@ export default function ReportClient({ summary, chartData, transactions, registe
     setMounted(true)
   }, [])
 
-  const currentYearStr = new Date().getFullYear().toString()
   const currentMonthStr = `${currentYearStr}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
   const [exportStartMonth, setExportStartMonth] = useState(currentMonthStr)
   const [exportEndMonth, setExportEndMonth] = useState(currentMonthStr)
