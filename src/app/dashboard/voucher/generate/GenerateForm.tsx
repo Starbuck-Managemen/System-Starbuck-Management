@@ -300,7 +300,10 @@ export function GenerateForm({
                     if (val.trim() === "") {
                       setVoucherCode("");
                     } else {
-                      const firstWord = val.trim().split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+                      let firstWord = val.trim().split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+                      if (firstWord.length > 0) {
+                        firstWord = firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
+                      }
                       // Generate 3 random alphanumeric chars
                       const randomChars = Math.random().toString(36).substring(2, 5);
                       setVoucherCode(firstWord + randomChars);
