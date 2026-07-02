@@ -328,15 +328,6 @@ export function GenerateForm({
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Password (Opsional)</label>
-              <input 
-                type="text" 
-                name="password"
-                className="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
-                placeholder="Kosongkan jika sama dengan username"
-              />
-            </div>
 
             <div className="space-y-2 md:col-span-2 relative">
               <label className="text-sm font-medium text-slate-300">Nomor WhatsApp Pelanggan (Untuk Pengingat Bulanan)</label>
