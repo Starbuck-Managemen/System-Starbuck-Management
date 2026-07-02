@@ -130,7 +130,10 @@ export default function ReportClient({ summary, chartData, transactions, registe
   
   const [startDate, setStartDate] = useState(firstDayStr)
   const [endDate, setEndDate] = useState(lastDayStr)
-  const [filterProfile, setFilterProfile] = useState('All')
+  
+  // Cari profil bulanan sebagai default
+  const defaultProfile = registeredProfiles.find(p => p.toLowerCase().includes("bulan")) || 'All'
+  const [filterProfile, setFilterProfile] = useState(defaultProfile)
   const [searchMonth, setSearchMonth] = useState('')
 
   // Auto-update date range when searching for a month
@@ -260,7 +263,7 @@ export default function ReportClient({ summary, chartData, transactions, registe
   const [appliedFilters, setAppliedFilters] = useState({
     startDate: firstDayStr,
     endDate: lastDayStr,
-    profile: 'All',
+    profile: defaultProfile,
     searchMonth: ''
   })
 

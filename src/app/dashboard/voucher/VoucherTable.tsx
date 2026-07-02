@@ -17,8 +17,12 @@ export function VoucherTable({
   errorMessage: string,
   role?: string
 }) {
+  // Dapatkan daftar profil unik dari data voucher untuk tombol filter
+  const uniqueProfiles = Array.from(new Set(vouchers.map(v => v.profile))).filter(Boolean) as string[]
+  const defaultProfile = uniqueProfiles.find(p => p.toLowerCase().includes("bulan")) || "All"
+
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedProfile, setSelectedProfile] = useState<string>("All")
+  const [selectedProfile, setSelectedProfile] = useState<string>(defaultProfile)
   const [selectedStatus, setSelectedStatus] = useState<string>("All")
   const [isPending, startTransition] = useTransition()
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -27,9 +31,6 @@ export function VoucherTable({
   const [sendingWaId, setSendingWaId] = useState<string | null>(null)
   const [renewingId, setRenewingId] = useState<string | null>(null)
   const [disablingId, setDisablingId] = useState<string | null>(null)
-
-  // Dapatkan daftar profil unik dari data voucher untuk tombol filter
-  const uniqueProfiles = Array.from(new Set(vouchers.map(v => v.profile))).filter(Boolean)
 
   // Fungsi pembantu untuk mengurai format waktu MikroTik (misal: 1d2h3m) menjadi detik
   const parseMikrotikTime = (timeStr: string) => {
