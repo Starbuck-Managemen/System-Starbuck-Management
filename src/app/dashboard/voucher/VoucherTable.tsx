@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Search, Trash2, Loader2, Printer, Filter, MessageCircle, AlertTriangle, Phone, CalendarSync, Ban } from "lucide-react"
+import { Search, Trash2, Loader2, Printer, Filter, MessageCircle, Send, AlertTriangle, Phone, CalendarSync, Ban } from "lucide-react"
 import { deleteVoucherAction, changeProfileAction, updateWAAction, renewVoucherAction, disableVoucherAction } from "./actions"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -210,6 +210,47 @@ export function VoucherTable({
           toast.error(errorData.error || "Gagal mengirim pesan dari Bot WA")
         } else {
           toast.success("Pesan WA berhasil dikirim via Bot!")
+        }
+      } catch (err) {
+        toast.error("Gagal terhubung ke service Bot WA")
+      } finally {
+        setSendingWaId(null)
+      }
+    })
+  }
+
+  const handleSendVoucherWA = (voucherId: string, voucherName: string, waNumber: string, comment: string, profile: string) => {
+    if (!routerId) return
+    
+    if (!confirm(`Kirim pesan WA berisi detail voucher ke ${voucherName} (${waNumber}) sekarang via Bot?`)) return
+    
+    let customerName = "";
+    if (comment) {
+      const parts = comment.split("|");
+      parts.forEach((p: string) => {
+        if (p.startsWith("Nama:")) customerName = p.substring(5);
+      });
+    }
+    const displayName = customerName ? customerName : voucherName;
+
+    setSendingWaId(voucherId)
+    startTransition(async () => {
+      try {
+        const hour = new Date().getHours();
+        const greeting = hour < 4 ? "Selamat Malam" : hour < 11 ? "Selamat Pagi" : hour < 15 ? "Selamat Siang" : hour < 18 ? "Selamat Sore" : "Selamat Malam";
+        const message = `${greeting} kak *${displayName}*! 👋\n\nIni pesan otomatis dari Admin WiFi STARBUCK. Pendaftaran langganan internet kakak sudah berhasil kami proses ya.\n\nBerikut adalah detail akses WiFi kakak:\n🎟️ Kode Voucher: *${voucherName}*\n📦 Paket: *${profile}*\n\nSelamat menikmati koneksi internet kami! Jika ada kendala, jangan sungkan untuk menghubungi kami. Terima kasih! 🙏`;
+        
+        const waResponse = await fetch('http://127.0.0.1:3001/send-wa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ number: waNumber, message })
+        });
+        
+        if (!waResponse.ok) {
+          const errorData = await waResponse.json().catch(() => ({}));
+          toast.error(errorData.error || "Gagal mengirim pesan dari Bot WA")
+        } else {
+          toast.success("Voucher berhasil dikirim via WA Bot!")
         }
       } catch (err) {
         toast.error("Gagal terhubung ke service Bot WA")
@@ -450,13 +491,29 @@ export function VoucherTable({
                   </td>
                   {role === 'ADMIN' && (
                     <td className="px-6 py-4 text-right space-x-2">
-                      {/* Action: Kirim WA Manual (Test Bot) */}
+                      {/* Action: Kirim WA Voucher Detail */}
+                      {isMonthly && waNumber && (
+                        <button 
+                          onClick={() => handleSendVoucherWA(v.id, v.name, waNumber, v.comment || "", v.profile || "")}
+                          disabled={isPending && sendingWaId === v.id}
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors disabled:opacity-50"
+                          title="Kirim Detail Voucher"
+                        >
+                          {isPending && sendingWaId === v.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Send className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+
+                      {/* Action: Kirim WA Peringatan */}
                       {isMonthly && waNumber && (
                         <button 
                           onClick={() => handleSendManualWA(v.id, v.name, waNumber, v.comment || "")}
                           disabled={isPending && sendingWaId === v.id}
                           className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-colors disabled:opacity-50"
-                          title="Tes Bot: Kirim Peringatan"
+                          title="Kirim Peringatan"
                         >
                           {isPending && sendingWaId === v.id ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
