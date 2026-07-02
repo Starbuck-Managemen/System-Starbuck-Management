@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { processGenerateVoucher, processManualVoucher } from "./actions"
 import { sendManualWAAction } from "../actions"
@@ -27,6 +27,19 @@ export function GenerateForm({
   const [isPending, startTransition] = useTransition()
   const [generatedVouchers, setGeneratedVouchers] = useState<{vouchers: string[], batchId: string} | null>(null)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const [waContacts, setWaContacts] = useState<{id: string, name: string, number: string}[]>([])
+
+  // Fetch WA contacts on mount
+  useEffect(() => {
+    fetch('/api/wa/contacts')
+      .then(res => res.json())
+      .then(data => {
+        if (data.contacts) {
+          setWaContacts(data.contacts)
+        }
+      })
+      .catch(err => console.error("Gagal mengambil data kontak WA:", err))
+  }, [])
 
   const handleCopy = (code: string) => {
     navigator.clipboard.writeText(code)
@@ -278,10 +291,21 @@ export function GenerateForm({
               <input 
                 type="text" 
                 name="waNumber"
+                list="wa-contacts-list"
                 className="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
-                placeholder="Contoh: 6281234567890 (Gunakan kode negara tanpa +)"
+                placeholder="Ketik nama atau pilih dari kontak WA..."
+                autoComplete="off"
               />
-              <p className="text-xs text-slate-500">Isi nomor ini khusus untuk pelanggan langganan (Misal: Bulanan). Sistem akan menyiapkan template WA otomatis 2 hari sebelum masa aktif berakhir (30 Hari).</p>
+              <datalist id="wa-contacts-list">
+                {waContacts.map(contact => (
+                  <option key={contact.id} value={contact.number}>
+                    {contact.name}
+                  </option>
+                ))}
+              </datalist>
+              <p className="text-xs text-slate-500 mt-1">
+                Isi nomor ini khusus untuk pelanggan langganan (Misal: Bulanan). Sistem akan menyiapkan template WA otomatis 2 hari sebelum masa aktif berakhir (30 Hari).
+              </p>
             </div>
           </>
         )}

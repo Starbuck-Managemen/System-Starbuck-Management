@@ -72,6 +72,33 @@ app.post('/send-wa', async (req, res) => {
     }
 });
 
+// Endpoint untuk mengambil daftar kontak WA yang tersimpan
+app.get('/contacts', async (req, res) => {
+    if (!isReady) {
+        return res.status(503).json({ error: 'WhatsApp Bot belum siap atau belum di-scan.' });
+    }
+
+    try {
+        const contacts = await client.getContacts();
+        // Filter: Hanya kontak personal (bukan grup) yang sudah tersimpan di HP/Akun WA
+        const savedContacts = contacts
+            .filter(c => c.isMyContact && !c.isGroup)
+            .map(c => ({
+                id: c.id._serialized,
+                name: c.name || c.pushname || c.shortName || c.number,
+                number: c.number
+            }));
+            
+        // Urutkan berdasarkan nama
+        savedContacts.sort((a, b) => a.name.localeCompare(b.name));
+        
+        res.json({ contacts: savedContacts });
+    } catch (err) {
+        console.error('Gagal mengambil kontak WA:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Fungsi untuk memicu pengecekan otomatis (Cron) ke Next.js API
 async function triggerNextJsCron() {
     try {
