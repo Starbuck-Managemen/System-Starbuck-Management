@@ -20,12 +20,15 @@ export default async function DashboardLayout({
   const session = await auth()
   
   let dbUser = null
-  if (session?.user?.email) {
+  if (session?.user && (session.user as any).id) {
+    dbUser = await prisma.user.findUnique({
+      where: { id: (session.user as any).id }
+    })
+  } else if (session?.user?.email) {
     dbUser = await prisma.user.findUnique({
       where: { email: session.user.email }
     })
   } else if (session?.user?.name) {
-    // If username is stored in name instead
     dbUser = await prisma.user.findFirst({
       where: { username: session.user.name }
     })
