@@ -2,6 +2,7 @@
 
 import { generateVouchers, addManualVoucher, getHotspotServers, getHotspotProfiles } from "@/lib/mikrotik"
 import { revalidatePath } from "next/cache"
+import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 
 export async function fetchRouterDetails(routerId: string) {
@@ -73,6 +74,21 @@ export async function processManualVoucher(formData: FormData) {
   const result = await addManualVoucher(routerId, { server, profile, name, password, waNumber, customerName })
   
   if (result.success) {
+    // Simpan kontak secara otomatis jika ada nomor WA
+    if (waNumber && waNumber.trim() !== "") {
+      try {
+        const cleanNumber = waNumber.replace(/\D/g, '');
+        const contactName = customerName || name || cleanNumber;
+        await prisma.savedContact.upsert({
+          where: { waNumber: cleanNumber },
+          update: { name: contactName },
+          create: { waNumber: cleanNumber, name: contactName }
+        });
+      } catch (err) {
+        console.error("Gagal menyimpan kontak:", err);
+      }
+    }
+
     revalidatePath("/dashboard/voucher")
     return { success: true }
   } else {

@@ -27,17 +27,40 @@ export function GenerateForm({
   const [generatedVouchers, setGeneratedVouchers] = useState<{vouchers: string[], batchId: string} | null>(null)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [waContacts, setWaContacts] = useState<{id: string, name: string, number: string}[]>([])
+  const [waInput, setWaInput] = useState("")
+  const [showDropdown, setShowDropdown] = useState(false)
 
-  // Fetch WA contacts on mount directly from local WA bot
+  // Fetch WA contacts on mount directly from local WA bot and DB
   useEffect(() => {
-    fetch('http://127.0.0.1:3001/contacts')
-      .then(res => res.json())
-      .then(data => {
-        if (data.contacts) {
-          setWaContacts(data.contacts)
-        }
-      })
-      .catch(err => console.error("Gagal mengambil data kontak WA:", err))
+    const fetchContacts = async () => {
+      try {
+        let botContacts: any[] = []
+        let dbContacts: any[] = []
+
+        try {
+          const res1 = await fetch('http://127.0.0.1:3001/contacts')
+          if (res1.ok) {
+            const data1 = await res1.json()
+            botContacts = data1.contacts || []
+          }
+        } catch(e) {}
+
+        try {
+          const res2 = await fetch('/api/wa/contacts')
+          if (res2.ok) {
+            const data2 = await res2.json()
+            dbContacts = data2.contacts || []
+          }
+        } catch(e) {}
+
+        const combined = [...dbContacts, ...botContacts]
+        const unique = Array.from(new Map(combined.map(item => [item.number, item])).values())
+        setWaContacts(unique)
+      } catch (err) {
+        console.error("Gagal mengambil kontak:", err)
+      }
+    }
+    fetchContacts()
   }, [])
 
   const handleCopy = (code: string) => {
@@ -291,25 +314,50 @@ export function GenerateForm({
               />
             </div>
 
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2 md:col-span-2 relative">
               <label className="text-sm font-medium text-slate-300">Nomor WhatsApp Pelanggan (Untuk Pengingat Bulanan)</label>
               <input 
                 type="text" 
                 name="waNumber"
-                list="wa-contacts-list"
+                value={waInput}
+                onChange={(e) => {
+                  setWaInput(e.target.value)
+                  setShowDropdown(true)
+                }}
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                 className="w-full bg-[#0f172a] border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
                 placeholder="Ketik nama atau pilih dari kontak WA..."
                 autoComplete="off"
               />
-              <datalist id="wa-contacts-list">
-                {waContacts.map(contact => (
-                  <option key={contact.id} value={contact.number}>
-                    {contact.name}
-                  </option>
-                ))}
-              </datalist>
+              
+              {showDropdown && (
+                <ul className="absolute z-10 w-full bg-[#1e293b] border border-slate-700 rounded-xl mt-1 max-h-60 overflow-y-auto shadow-xl">
+                  {waContacts
+                    .filter(c => c.name.toLowerCase().includes(waInput.toLowerCase()) || c.number.includes(waInput))
+                    .map((contact, idx) => (
+                      <li 
+                        key={contact.id || idx} 
+                        className="px-4 py-2 hover:bg-slate-700 cursor-pointer text-slate-200 transition-colors flex justify-between"
+                        onClick={() => {
+                          setWaInput(contact.number)
+                          setShowDropdown(false)
+                        }}
+                      >
+                        <span className="font-medium">{contact.name}</span>
+                        <span className="text-slate-400 text-sm">{contact.number}</span>
+                      </li>
+                  ))}
+                  {waInput && !waContacts.some(c => c.number.includes(waInput)) && (
+                    <li className="px-4 py-2 text-slate-400 italic text-sm">
+                      Tekan Simpan untuk merekam nomor baru ini.
+                    </li>
+                  )}
+                </ul>
+              )}
+
               <p className="text-xs text-slate-500 mt-1">
-                Isi nomor ini khusus untuk pelanggan langganan (Misal: Bulanan). Sistem akan menyiapkan template WA otomatis 2 hari sebelum masa aktif berakhir (30 Hari).
+                Isi nomor ini khusus untuk pelanggan langganan. Sistem akan merekam nomor baru secara otomatis untuk pemesanan berikutnya.
               </p>
             </div>
           </>
