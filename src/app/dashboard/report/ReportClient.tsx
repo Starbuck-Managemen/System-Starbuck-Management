@@ -228,7 +228,9 @@ export default function ReportClient({ summary, chartData, transactions, registe
         "Tanggal Aktif": formatDateTime(activeDate),
         "Tanggal Kedaluwarsa": formatDateTime(expiresDate),
         "Profil": tx.voucherType || '-',
-        "Pendapatan (Rp)": tx.amount
+        "Pendapatan Kotor (Rp)": tx.amount,
+        "Komisi Reseller (15%)": tx.amount * 0.15,
+        "Bersih Admin (85%)": tx.amount * 0.85
       };
     });
 
@@ -237,13 +239,16 @@ export default function ReportClient({ summary, chartData, transactions, registe
     XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Keuangan");
     
     // Calculate totals
+    const totalGross = filteredForExport.reduce((sum, tx) => sum + tx.amount, 0);
     const totalRow = {
       "No": "",
       "Username": "",
       "Tanggal Aktif": "",
       "Tanggal Kedaluwarsa": "",
-      "Profil": "TOTAL PENDAPATAN",
-      "Pendapatan (Rp)": filteredForExport.reduce((sum, tx) => sum + tx.amount, 0)
+      "Profil": "TOTAL",
+      "Pendapatan Kotor (Rp)": totalGross,
+      "Komisi Reseller (15%)": totalGross * 0.15,
+      "Bersih Admin (85%)": totalGross * 0.85
     };
     XLSX.utils.sheet_add_json(worksheet, [totalRow], { skipHeader: true, origin: -1 });
 
@@ -340,9 +345,17 @@ export default function ReportClient({ summary, chartData, transactions, registe
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-400">{formatIDR(totalIncome)}</div>
-            <p className="text-xs text-slate-500 mt-1">
-              Berdasarkan periode filter
-            </p>
+            
+            <div className="mt-4 pt-3 border-t border-slate-700/50 flex flex-col gap-2">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-400">Komisi Reseller (15%)</span>
+                <span className="text-amber-400 font-medium">{formatIDR(totalIncome * 0.15)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-400">Bersih Admin (85%)</span>
+                <span className="text-emerald-500 font-bold">{formatIDR(totalIncome * 0.85)}</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
         
@@ -481,9 +494,21 @@ export default function ReportClient({ summary, chartData, transactions, registe
         {/* Table Header / Summary */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-5 py-4 border-b border-[#454D55] bg-[#3A4047]">
           <h2 className="font-bold text-base text-white">{reportTitle}</h2>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-12 font-bold text-base text-white">
-            <span className="text-slate-300 text-sm sm:text-base">Total Pendapatan Terfilter</span>
-            <span className="text-xl sm:text-base text-emerald-400 sm:text-white">Rp {totalIncome.toLocaleString('id-ID')}</span>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-8 font-bold text-base text-white">
+            <div className="flex flex-col items-end">
+              <span className="text-slate-400 text-xs font-medium">Pendapatan Kotor</span>
+              <span className="text-lg text-white">Rp {totalIncome.toLocaleString('id-ID')}</span>
+            </div>
+            <div className="hidden sm:block w-px h-8 bg-slate-600"></div>
+            <div className="flex flex-col items-end">
+              <span className="text-orange-400 text-xs font-medium">Potongan Reseller (15%)</span>
+              <span className="text-lg text-orange-400">Rp {(totalIncome * 0.15).toLocaleString('id-ID')}</span>
+            </div>
+            <div className="hidden sm:block w-px h-8 bg-slate-600"></div>
+            <div className="flex flex-col items-end">
+              <span className="text-emerald-400 text-xs font-medium">Bersih Admin (85%)</span>
+              <span className="text-xl text-emerald-400">Rp {(totalIncome * 0.85).toLocaleString('id-ID')}</span>
+            </div>
           </div>
         </div>
 
