@@ -3,7 +3,6 @@
 import { useState, useTransition, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { processGenerateVoucher, processManualVoucher } from "./actions"
-import { sendManualWAAction } from "../actions"
 import { PlusCircle, Loader2, Settings2, Printer, Copy, Check, ClipboardList } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -29,9 +28,9 @@ export function GenerateForm({
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [waContacts, setWaContacts] = useState<{id: string, name: string, number: string}[]>([])
 
-  // Fetch WA contacts on mount
+  // Fetch WA contacts on mount directly from local WA bot
   useEffect(() => {
-    fetch('/api/wa/contacts')
+    fetch('http://127.0.0.1:3001/contacts')
       .then(res => res.json())
       .then(data => {
         if (data.contacts) {
@@ -89,14 +88,20 @@ export function GenerateForm({
               const message = `${greeting} kak *${displayName}*! 👋\n\nIni pesan otomatis dari Admin WiFi STARBUCK. Pendaftaran langganan internet kakak sudah berhasil kami proses ya.\n\nBerikut adalah detail akses WiFi kakak:\n🎟️ Kode Voucher: *${name}*\n📦 Paket: *${profile}*\n\nSelamat menikmati koneksi internet kami! Jika ada kendala, jangan sungkan untuk menghubungi kami. Terima kasih! 🙏`;
               
               try {
-                const waResult = await sendManualWAAction(waNumber, message);
-                if (waResult.error) {
-                  toast.warning("Voucher berhasil dibuat, tapi gagal mengirim WA: " + waResult.error);
+                const waResponse = await fetch('http://127.0.0.1:3001/send-wa', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ number: waNumber, message })
+                });
+
+                if (!waResponse.ok) {
+                  const errorData = await waResponse.json().catch(() => ({}));
+                  toast.warning("Voucher berhasil dibuat, tapi gagal mengirim WA: " + (errorData.error || "Gagal dari Bot"));
                 } else {
                   toast.success("Notifikasi WA terkirim ke pelanggan!");
                 }
               } catch (e) {
-                toast.warning("Voucher berhasil dibuat, tapi gagal mengirim notifikasi WA.");
+                toast.warning("Voucher berhasil dibuat, tapi gagal terhubung ke Service Bot WA.");
               }
             }
 

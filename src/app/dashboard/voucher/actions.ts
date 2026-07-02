@@ -18,24 +18,7 @@ export async function updateWAAction(routerId: string, voucherName: string, waNu
   }
 }
 
-export async function sendManualWAAction(waNumber: string, message: string) {
-  try {
-    const waResponse = await fetch('http://127.0.0.1:3001/send-wa', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ number: waNumber, message })
-    })
 
-    if (waResponse.ok) {
-      return { success: true }
-    } else {
-      const data = await waResponse.json()
-      return { error: data.error || "Gagal mengirim dari Bot WA" }
-    }
-  } catch (error: any) {
-    return { error: "Service Bot WhatsApp (Port 3001) tidak aktif atau belum di-scan." }
-  }
-}
 
 export async function renewVoucherAction(routerId: string, voucherName: string) {
   if (!routerId || !voucherName) {

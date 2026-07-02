@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { Search, Trash2, Loader2, Printer, Filter, MessageCircle, AlertTriangle, Phone, CalendarSync, Ban } from "lucide-react"
-import { deleteVoucherAction, changeProfileAction, updateWAAction, sendManualWAAction, renewVoucherAction, disableVoucherAction } from "./actions"
+import { deleteVoucherAction, changeProfileAction, updateWAAction, renewVoucherAction, disableVoucherAction } from "./actions"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -199,9 +199,15 @@ export function VoucherTable({
         const hour = new Date().getHours();
         const greeting = hour < 4 ? "Selamat Malam" : hour < 11 ? "Selamat Pagi" : hour < 15 ? "Selamat Siang" : hour < 18 ? "Selamat Sore" : "Selamat Malam";
         const message = `${greeting} kak *${displayName}*! 👋\n\nIni dari Admin WiFi STARBUCK. Kami ingin menginformasikan bahwa masa aktif internet bulanan untuk kode voucher *${voucherName}* akan segera berakhir.\n\nMohon dapat melakukan perpanjangan agar tetap bisa menikmati koneksi internet kami dengan lancar ya kak. Terima kasih! 🙏`
-        const result = await sendManualWAAction(waNumber, message)
-        if (result.error) {
-          toast.error(result.error)
+        const waResponse = await fetch('http://127.0.0.1:3001/send-wa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ number: waNumber, message })
+        });
+        
+        if (!waResponse.ok) {
+          const errorData = await waResponse.json().catch(() => ({}));
+          toast.error(errorData.error || "Gagal mengirim pesan dari Bot WA")
         } else {
           toast.success("Pesan WA berhasil dikirim via Bot!")
         }
