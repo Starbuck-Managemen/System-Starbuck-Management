@@ -78,16 +78,18 @@ export function GenerateForm({
               try {
                 const waResult = await sendManualWAAction(waNumber, message);
                 if (waResult.error) {
-                  toast.error("Gagal mengirim WA: " + waResult.error);
+                  toast.warning("Voucher berhasil dibuat, tapi gagal mengirim WA: " + waResult.error);
                 } else {
                   toast.success("Notifikasi WA terkirim ke pelanggan!");
                 }
               } catch (e) {
-                toast.error("Gagal mengirim notifikasi WA.");
+                toast.warning("Voucher berhasil dibuat, tapi gagal mengirim notifikasi WA.");
               }
             }
 
-            formElement.reset() // Kosongkan form agar bisa input lagi
+            // Tampilkan layar sukses
+            setGeneratedVouchers({ vouchers: [name], batchId: '' })
+            formElement.reset() // Kosongkan form untuk generate berikutnya
           }
         }
       } catch (err) {
