@@ -83,7 +83,7 @@ export default async function VoucherPage({
         
         {/* Router Selector & Generate Button */}
         {routers.length > 0 ? (
-          <VoucherPageClientHeader routers={routers} selectedRouterId={selectedRouterId} />
+          <VoucherPageClientHeader routers={routers} selectedRouterId={selectedRouterId} role={role} />
         ) : (
           <Link href="/dashboard/router" className="text-blue-500 hover:underline text-sm">
             + Tambah Router Terlebih Dahulu

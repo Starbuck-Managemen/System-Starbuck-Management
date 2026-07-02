@@ -7,10 +7,12 @@ import { GenerateVoucherModal } from "../orders/GenerateVoucherModal"
 
 export function VoucherPageClientHeader({ 
   routers, 
-  selectedRouterId 
+  selectedRouterId,
+  role
 }: { 
   routers: any[], 
-  selectedRouterId: string 
+  selectedRouterId: string,
+  role?: string
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -20,20 +22,24 @@ export function VoucherPageClientHeader({
         <RouterIcon className="w-5 h-5 text-slate-400 hidden md:block" />
         <RouterSelector routers={routers} selectedRouterId={selectedRouterId} />
         
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Generate Voucher
-        </button>
+        {role === 'ADMIN' && (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Generate Voucher
+          </button>
+        )}
       </div>
 
-      <GenerateVoucherModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        routers={routers}
-      />
+      {role === 'ADMIN' && (
+        <GenerateVoucherModal 
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          routers={routers}
+        />
+      )}
     </>
   )
 }

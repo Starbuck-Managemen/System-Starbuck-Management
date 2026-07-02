@@ -3,12 +3,33 @@ import { getHotspotProfiles, getHotspotServers } from "@/lib/mikrotik"
 import { Ticket, ArrowLeft, PlusCircle } from "lucide-react"
 import Link from "next/link"
 import { GenerateForm } from "./GenerateForm"
+import { auth } from "@/auth"
+import { redirect } from "next/navigation"
 
 export default async function GenerateVoucherPage({
   searchParams
 }: {
   searchParams: { routerId?: string }
 }) {
+  const session = await auth()
+  
+  if (!session?.user) {
+    redirect('/login')
+  }
+
+  const dbUser = await prisma.user.findFirst({
+    where: { 
+      OR: [
+        { email: session.user.email || "" },
+        { username: session.user.name || "" }
+      ]
+    }
+  })
+
+  if (dbUser?.role !== 'ADMIN') {
+    redirect('/dashboard') // Redirect non-admins to dashboard
+  }
+
   const routers = await prisma.router.findMany()
   
   if (routers.length === 0) {
