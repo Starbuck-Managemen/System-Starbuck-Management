@@ -632,3 +632,24 @@ export async function calculateTotalRevenue(routerId: string) {
   }
 }
 
+/**
+ * Mengambil informasi uptime dari router MikroTik
+ */
+export async function getRouterUptime(routerId: string) {
+  let client
+  try {
+    client = await getMikrotikClient(routerId)
+    const resource = await client.api().menu("/system/resource").get()
+    
+    if (resource && resource.length > 0) {
+      return resource[0].uptime
+    }
+    return null
+  } catch (error) {
+    console.error("Error getRouterUptime:", error)
+    return null
+  } finally {
+    if (client) client.close()
+  }
+}
+

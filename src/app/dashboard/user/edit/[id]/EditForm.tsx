@@ -97,6 +97,19 @@ export function EditUserForm({ user }: { user: any }) {
             </div>
 
             <div className="grid gap-2">
+              <Label htmlFor="phone" className="text-[13px] font-medium text-slate-300 ml-1">No. WhatsApp</Label>
+              <Input
+                id="phone"
+                name="phone"
+                type="text"
+                defaultValue={user.phone || ''}
+                placeholder="Contoh: 6281234567890"
+                required
+                className="bg-[#0b1220] border-slate-700 h-12 px-4 focus-visible:ring-1 focus-visible:ring-blue-500 rounded-xl placeholder:text-slate-500 text-[13px]"
+              />
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="password" className="text-[13px] font-medium text-slate-300 ml-1">Password Baru (Opsional)</Label>
               <Input
                 id="password"

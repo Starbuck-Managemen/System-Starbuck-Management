@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const express = require('express');
@@ -104,7 +105,7 @@ async function triggerNextJsCron() {
     try {
         console.log('🔄 Memulai Patroli Otomatis ke MikroTik...');
         const response = await fetch('http://127.0.0.1:3000/api/cron/wa-reminder', {
-            method: 'POST'
+            method: 'GET'
         });
         if (response.ok) {
             const data = await response.json();
@@ -119,6 +120,44 @@ async function triggerNextJsCron() {
 
 // Set Interval Patroli Otomatis (Setiap 24 Jam = 24 * 60 * 60 * 1000 ms)
 setInterval(triggerNextJsCron, 24 * 60 * 60 * 1000); 
+
+// Fungsi pemantau Downtime Router (tiap 5 menit)
+async function triggerRouterMonitorCron() {
+    if (!isReady) return;
+    try {
+        const response = await fetch('http://127.0.0.1:3000/api/cron/router-monitor', {
+            method: 'GET'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            if (data.logs && data.logs.length > 0) {
+                // Gunakan nomor admin dari ENV, pastikan formatnya benar
+                const adminPhone = process.env.ADMIN_PHONE;
+                if (!adminPhone) {
+                    console.error('⚠️ ADMIN_PHONE belum diatur di environment/script. Notifikasi mati/hidup tidak terkirim via WA.');
+                    return;
+                }
+                
+                const formattedNumber = `${adminPhone.replace(/[^0-9]/g, '')}@c.us`;
+                const contactId = await client.getNumberId(formattedNumber);
+                
+                if (contactId) {
+                    for (const log of data.logs) {
+                        await client.sendMessage(contactId._serialized, log.message);
+                        console.log(`[ROUTER-MONITOR] Pesan notifikasi terkirim ke Admin (${adminPhone})`);
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        // Abaikan jika Next.js belum siap
+    }
+}
+
+// Set Interval Router Monitor (Setiap 5 Menit)
+setInterval(triggerRouterMonitorCron, 5 * 60 * 1000);
 
 const PORT = 3001;
 app.listen(PORT, () => {

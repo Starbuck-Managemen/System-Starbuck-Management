@@ -9,11 +9,14 @@ export async function createUser(prevState: any, formData: FormData) {
   const username = formData.get('username') as string
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const phone = formData.get('phone') as string
   const role = formData.get('role') as string
 
-  if (!name || !username || !email || !password || !role) {
+  if (!name || !username || !email || !password || !role || !phone) {
     return { error: 'All fields are required' }
   }
+
+  const cleanedPhone = phone.replace(/[^0-9]/g, '')
 
   try {
     await prisma.user.create({
@@ -21,6 +24,7 @@ export async function createUser(prevState: any, formData: FormData) {
         name,
         username,
         email,
+        phone: cleanedPhone,
         password,
         role,
         status: 'Active'
@@ -54,17 +58,21 @@ export async function updateUser(id: string, prevState: any, formData: FormData)
   const username = formData.get('username') as string
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const phone = formData.get('phone') as string
   const role = formData.get('role') as string
 
-  if (!name || !username || !email || !role) {
+  if (!name || !username || !email || !role || !phone) {
     return { error: 'Semua field kecuali password wajib diisi' }
   }
+
+  const cleanedPhone = phone.replace(/[^0-9]/g, '')
 
   try {
     const updateData: any = {
       name,
       username,
       email,
+      phone: cleanedPhone,
       role
     }
     

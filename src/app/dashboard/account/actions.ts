@@ -14,6 +14,7 @@ export async function updateAccount(prevState: any, formData: FormData) {
 
   const userId = formData.get('userId') as string
   const password = formData.get('password') as string
+  const phone = formData.get('phone') as string
 
   // Simple validation
   if (password && password.trim().length > 0 && password.trim().length < 6) {
@@ -31,8 +32,15 @@ export async function updateAccount(prevState: any, formData: FormData) {
     if (password && password.trim().length >= 6) {
       dataToUpdate.password = password
     }
+    if (phone !== null) {
+      // Hanya biarkan angka
+      const cleanedPhone = phone.replace(/[^0-9]/g, '')
+      if (cleanedPhone !== dbUser.phone) {
+         dataToUpdate.phone = cleanedPhone || null
+      }
+    }
 
-    // Hanya update jika ada data yang ingin diubah (dalam hal ini hanya password)
+    // Hanya update jika ada data yang ingin diubah
     if (Object.keys(dataToUpdate).length > 0) {
       await prisma.user.update({
         where: { id: userId },

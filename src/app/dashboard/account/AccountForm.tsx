@@ -45,6 +45,20 @@ export function AccountForm({ user }: { user: any }) {
         </div>
 
         <div className="grid gap-2">
+          <label htmlFor="phone" className="text-[13px] font-semibold text-slate-300 ml-1 flex items-center gap-2">
+            <User className="w-4 h-4 text-slate-400" /> No. WhatsApp
+          </label>
+          <input
+            id="phone"
+            name="phone"
+            type="text"
+            defaultValue={user.phone || ''}
+            placeholder="Contoh: 6281234567890"
+            className="bg-[#0b1220] border border-slate-700 h-12 px-4 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-xl text-sm text-slate-200 placeholder:text-slate-600"
+          />
+        </div>
+
+        <div className="grid gap-2">
           <label htmlFor="password" className="text-[13px] font-semibold text-slate-300 ml-1 flex items-center gap-2">
             <Key className="w-4 h-4 text-slate-400" /> Password Baru (Opsional)
           </label>

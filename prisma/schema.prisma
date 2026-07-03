@@ -16,6 +16,7 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   password      String?
+  phone         String?   @unique
   image         String?
   role                String    @default("USER")
   status              String    @default("Active")
@@ -73,16 +74,18 @@ model Voucher {
 }
 
 model Router {
-  id        String   @id @default(cuid())
-  name      String
-  host      String   // IP Address or VPN Host (e.g. id-1.mikhmon.online)
-  apiPort   Int      @default(8728)
-  username  String   @default("admin")
-  password  String   @default("")
-  status    String   @default("Offline")
-  orders    Order[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(cuid())
+  name              String
+  host              String   // IP Address or VPN Host (e.g. id-1.mikhmon.online)
+  apiPort           Int      @default(8728)
+  username          String   @default("admin")
+  password          String   @default("")
+  status            String   @default("Offline")
+  lastOfflineAt     DateTime?
+  isNotifiedOffline Boolean  @default(false)
+  orders            Order[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model Profile {

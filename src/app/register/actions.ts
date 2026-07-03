@@ -8,11 +8,14 @@ export async function registerUser(prevState: any, formData: FormData) {
   const username = formData.get('username') as string
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const phone = formData.get('phone') as string
   const role = formData.get('role') as string || 'USER'
 
-  if (!name || !username || !email || !password) {
+  if (!name || !username || !email || !password || !phone) {
     return { error: 'Semua field wajib diisi' }
   }
+
+  const cleanedPhone = phone.replace(/[^0-9]/g, '')
 
   try {
     // Cek apakah nama sudah digunakan
@@ -40,6 +43,13 @@ export async function registerUser(prevState: any, formData: FormData) {
     if (existingEmail) {
       return { error: 'Email sudah digunakan, silakan pilih yang lain' }
     }
+    
+    const existingPhone = await prisma.user.findUnique({
+      where: { phone: cleanedPhone }
+    })
+    if (existingPhone) {
+      return { error: 'Nomor WhatsApp sudah terdaftar, silakan gunakan nomor lain' }
+    }
 
     // Buat user baru dengan default role User dan status Active
     await prisma.user.create({
@@ -47,6 +57,7 @@ export async function registerUser(prevState: any, formData: FormData) {
         name,
         username,
         email,
+        phone: cleanedPhone,
         password,
         role,
         status: 'Active'

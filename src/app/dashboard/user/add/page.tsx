@@ -80,6 +80,18 @@ export default function AddUserPage() {
             </div>
 
             <div className="grid gap-2">
+              <Label htmlFor="phone" className="text-[13px] font-medium text-slate-300 ml-1">No. WhatsApp</Label>
+              <Input
+                id="phone"
+                name="phone"
+                type="text"
+                placeholder="Contoh: 6281234567890"
+                required
+                className="bg-[#0b1220] border-slate-700 h-12 px-4 focus-visible:ring-1 focus-visible:ring-blue-500 rounded-xl placeholder:text-slate-500 text-[13px]"
+              />
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="password" className="text-[13px] font-medium text-slate-300 ml-1">Password</Label>
               <Input
                 id="password"
