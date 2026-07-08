@@ -28,9 +28,9 @@ export function UserNav({ user }: { user?: { name?: string | null, email?: strin
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-3 pl-3 pr-2 py-1.5 rounded-lg border border-transparent transition-colors outline-none focus:outline-none ${isOpen ? 'border-slate-700 bg-[#0F172A]' : 'hover:border-slate-700 hover:bg-[#0F172A]'}`}
       >
-        <div className="hidden md:flex flex-col text-right">
-          <span className="text-[13px] font-bold text-slate-100 leading-tight">{displayName}</span>
-          <span className="text-[11px] font-medium text-slate-400">{displayRole}</span>
+        <div className="flex flex-col text-right max-w-[100px] sm:max-w-[150px]">
+          <span className="text-[13px] font-bold text-slate-100 leading-tight truncate">{displayName}</span>
+          <span className="text-[11px] font-medium text-slate-400 truncate">{displayRole}</span>
         </div>
         <div className="h-9 w-9 rounded-full bg-[#1E293B] border border-slate-600 flex items-center justify-center overflow-hidden">
           {user?.image ? (

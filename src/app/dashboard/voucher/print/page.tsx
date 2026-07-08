@@ -3,6 +3,8 @@ import { getVouchers } from "@/lib/mikrotik"
 import { PrintButton } from "./PrintButton"
 import { getSettings } from "@/app/dashboard/settings/actions"
 
+import { auth } from "@/auth"
+
 export default async function PrintVoucherPage({
   searchParams
 }: {
@@ -11,7 +13,22 @@ export default async function PrintVoucherPage({
   const resolvedSearchParams = await searchParams;
   const routerId = resolvedSearchParams.routerId
   const batchId = resolvedSearchParams.batchId
-  const settings = await getSettings()
+
+  const session = await auth()
+  let dbUser = null
+  if (session?.user?.email) {
+    dbUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+  } else if (session?.user?.name) {
+    dbUser = await prisma.user.findFirst({
+      where: { username: session.user.name }
+    })
+  }
+
+  const settings = await getSettings(dbUser?.id, dbUser?.role, dbUser?.adminId || undefined)
+  const voucherName = settings.voucherName || settings.appName;
+  const voucherLogo = settings.voucherLogo || settings.appLogo;
 
   if (!routerId) {
     return <div className="p-10 text-center">ID Router tidak ditemukan.</div>
@@ -73,8 +90,8 @@ export default async function PrintVoucherPage({
             return (
               <div key={v.id} className="border-2 border-dashed border-slate-400 rounded-xl p-3 flex flex-col items-center justify-center text-center page-break-inside-avoid relative">
                 <div className="font-bold text-sm text-blue-800 mb-1 border-b border-slate-300 w-full pb-1 flex flex-col items-center justify-center gap-1">
-                  <img src={settings.appLogo} alt="Logo" className="w-6 h-6 object-contain rounded-md" />
-                  <span>{settings.appName}</span>
+                  <img src={voucherLogo} alt="Logo" className="w-6 h-6 object-contain rounded-md" />
+                  <span>{voucherName}</span>
                 </div>
                 
                 <div className="text-[10px] text-slate-500 mt-1 uppercase font-semibold">Kode Voucher</div>

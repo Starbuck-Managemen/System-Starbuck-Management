@@ -8,6 +8,8 @@ import { LiveRouterStatus } from "./router/LiveRouterStatus"
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { getSettings } from "@/app/dashboard/settings/actions"
+import { cookies } from "next/headers"
+import { GlobalRouterSelector } from "@/components/GlobalRouterSelector"
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +33,9 @@ export default async function DashboardPage() {
   }
 
   let routerQuery: any = { orderBy: { createdAt: 'desc' } }
+  const targetUserId = dbUser?.role === 'USER' && dbUser?.adminId ? dbUser.adminId : dbUser?.id;
   if (dbUser?.role !== 'SUPERADMIN') {
-    routerQuery.where = { userId: dbUser?.id }
+    routerQuery.where = { userId: targetUserId }
   }
   const routers = await prisma.router.findMany(routerQuery)
 
@@ -41,8 +44,18 @@ export default async function DashboardPage() {
     redirect('/dashboard/router/create')
   }
 
-  // Ambil router pertama untuk ringkasan
-  const primaryRouter = routers.length > 0 ? routers[0] : null
+  const cookieStore = await cookies()
+  const selectedRouterId = cookieStore.get('superadmin_router_id')?.value
+
+  // Ambil router yang dipilih (khusus SUPERADMIN via cookie) atau default router pertama
+  let primaryRouter = null
+  if (dbUser?.role === 'SUPERADMIN') {
+    if (selectedRouterId) {
+      primaryRouter = routers.find(r => r.id === selectedRouterId) || null
+    }
+  } else {
+    primaryRouter = routers.length > 0 ? routers[0] : null
+  }
   
   let stats = { active: 0, unused: 0, offline: 0, disabled: 0, total: 0 }
   let totalRevenue = 0
@@ -89,6 +102,10 @@ export default async function DashboardPage() {
           </h1>
           <p className="text-slate-400 mt-2">Ringkasan sistem manajemen {settings.appName} Anda.</p>
         </div>
+        
+        {dbUser?.role === 'SUPERADMIN' && routers.length > 0 && (
+          <GlobalRouterSelector routers={routers} selectedId={selectedRouterId || null} />
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

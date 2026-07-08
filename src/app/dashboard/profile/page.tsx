@@ -13,6 +13,7 @@ export default async function ProfilePage({
 }: {
   searchParams: Promise<{ routerId?: string }>
 }) {
+  const cookieStore = await import("next/headers").then(m => m.cookies())
   const resolvedSearchParams = await searchParams;
   const session = await auth()
   let dbUser = null
@@ -23,19 +24,33 @@ export default async function ProfilePage({
   }
 
   let routerQuery: any = { orderBy: { createdAt: 'desc' } }
+  const targetUserId = dbUser?.role === 'USER' && dbUser?.adminId ? dbUser.adminId : dbUser?.id;
   if (dbUser?.role !== 'SUPERADMIN') {
-    routerQuery.where = { userId: dbUser?.id }
+    routerQuery.where = { userId: targetUserId }
   }
   
   // Ambil daftar router
   const routers = await prisma.router.findMany(routerQuery)
 
-  const selectedRouterId = resolvedSearchParams.routerId || (routers.length > 0 ? routers[0].id : null)
+  const superAdminRouterId = cookieStore.get('superadmin_router_id')?.value
+
+  let selectedRouterId = resolvedSearchParams.routerId
+  const role = dbUser?.role || 'USER'
+  
+  if (!selectedRouterId) {
+    if (role === 'SUPERADMIN') {
+      selectedRouterId = superAdminRouterId || undefined
+    } else {
+      selectedRouterId = routers.length > 0 ? routers[0].id : undefined
+    }
+  }
 
   let profiles: any[] = []
   let errorMessage = ""
 
-  if (selectedRouterId && !routers.some(r => r.id === selectedRouterId) && dbUser?.role !== 'SUPERADMIN') {
+  if (!selectedRouterId && role === 'SUPERADMIN') {
+    errorMessage = "Silakan pilih router di menu Dashboard terlebih dahulu."
+  } else if (selectedRouterId && !routers.some(r => r.id === selectedRouterId) && role !== 'SUPERADMIN') {
     errorMessage = "Akses ditolak: Router ini tidak valid atau bukan milik Anda."
   } else if (selectedRouterId) {
     const res = await getProfilesWithPrice(selectedRouterId)
@@ -63,8 +78,10 @@ export default async function ProfilePage({
         {/* Router Selector */}
         {routers.length > 0 ? (
           <div className="flex items-center gap-3">
-            <RouterIcon className="w-5 h-5 text-slate-400" />
-            <RouterSelector routers={routers} selectedRouterId={selectedRouterId} />
+            <RouterIcon className="w-5 h-5 text-slate-400 hidden md:block" />
+            {role !== 'SUPERADMIN' && (
+              <RouterSelector routers={routers} selectedRouterId={selectedRouterId || ''} />
+            )}
           </div>
         ) : (
           <Link href="/dashboard/router" className="text-blue-500 hover:underline text-sm">

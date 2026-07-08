@@ -63,12 +63,19 @@ export async function GET(req: Request) {
     const sendWaMessage = async (userId: string, message: string) => {
       try {
         const owner = await prisma.user.findUnique({ where: { id: userId } })
-        if (owner && owner.phone) {
-          await fetch('http://127.0.0.1:3001/send-wa', {
+        console.log(`[ROUTER-MONITOR] Coba kirim WA ke ${owner?.username} (Phone: ${owner?.phone}, Role: ${owner?.role})`)
+        // Hanya kirim notifikasi WA jika pemiliknya adalah ADMIN
+        if (owner && owner.phone && owner.role === 'ADMIN') {
+          console.log(`[ROUTER-MONITOR] Mengirim request ke WA API (clientId: ${userId})`)
+          const waRes = await fetch('http://127.0.0.1:3001/send-wa', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ clientId: userId, number: owner.phone, message })
           })
+          const waData = await waRes.json();
+          console.log(`[ROUTER-MONITOR] Respon WA API:`, waData)
+        } else {
+          console.log(`[ROUTER-MONITOR] Gagal kirim WA: Owner tidak ditemukan / nomor kosong / bukan ADMIN`)
         }
       } catch (e) {
         console.error("Gagal kirim WA notifikasi downtime", e)

@@ -5,7 +5,7 @@ import { saveSettings } from "./actions"
 import { toast } from "sonner"
 import { Save, Upload, Loader2 } from "lucide-react"
 
-export default function SettingsForm({ initialData, routers }: { initialData: Record<string, string>, routers: { id: string, name: string }[] }) {
+export default function SettingsForm({ initialData, routers, role }: { initialData: Record<string, string>, routers: { id: string, name: string }[], role: string }) {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState(initialData)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -30,7 +30,11 @@ export default function SettingsForm({ initialData, routers }: { initialData: Re
       })
       const result = await res.json()
       if (result.success) {
-        setFormData(prev => ({ ...prev, appLogo: result.url }))
+        if (role === 'SUPERADMIN') {
+          setFormData(prev => ({ ...prev, appLogo: result.url }))
+        } else {
+          setFormData(prev => ({ ...prev, voucherLogo: result.url }))
+        }
         toast.success("Logo berhasil diunggah!")
       } else {
         toast.error(result.error || "Gagal mengunggah logo")
@@ -59,13 +63,15 @@ export default function SettingsForm({ initialData, routers }: { initialData: Re
   return (
     <form onSubmit={handleSubmit} className="bg-[#1E293B] rounded-2xl p-6 border border-slate-800 shadow-sm flex flex-col gap-6">
       
-      {/* App Logo */}
+      {/* App / Voucher Logo */}
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-semibold text-slate-300">Logo Aplikasi</label>
+        <label className="text-sm font-semibold text-slate-300">
+          {role === 'SUPERADMIN' ? 'Logo Aplikasi Global' : 'Logo Cetak Voucher'}
+        </label>
         <div className="flex items-center gap-4">
           <div className="w-24 h-24 bg-slate-800 rounded-xl overflow-hidden flex items-center justify-center border border-slate-700">
-            {formData.appLogo ? (
-              <img src={formData.appLogo} alt="Logo" className="w-full h-full object-contain" />
+            {(role === 'SUPERADMIN' ? formData.appLogo : formData.voucherLogo) ? (
+              <img src={role === 'SUPERADMIN' ? formData.appLogo : formData.voucherLogo} alt="Logo" className="w-full h-full object-contain" />
             ) : (
               <span className="text-xs text-slate-500">No Logo</span>
             )}
@@ -87,18 +93,20 @@ export default function SettingsForm({ initialData, routers }: { initialData: Re
               <Upload className="w-4 h-4" />
               Unggah Logo Baru
             </button>
-            <p className="text-xs text-slate-500 mt-2">Rekomendasi: Format PNG transparan (Max 2MB).<br/>Ukuran ideal: <b>720 x 280 pixel</b> (Rasio memanjang) agar tampil maksimal dan tidak terpotong di halaman login.</p>
+            <p className="text-xs text-slate-500 mt-2">Rekomendasi: Format PNG transparan (Max 2MB).<br/>Ukuran ideal: <b>720 x 280 pixel</b> (Rasio memanjang).</p>
           </div>
         </div>
       </div>
 
-      {/* App Name */}
+      {/* App / Voucher Name */}
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-semibold text-slate-300">Nama Aplikasi</label>
+        <label className="text-sm font-semibold text-slate-300">
+          {role === 'SUPERADMIN' ? 'Nama Aplikasi Global' : 'Nama Pada Cetak Voucher'}
+        </label>
         <input 
           type="text" 
-          name="appName"
-          value={formData.appName} 
+          name={role === 'SUPERADMIN' ? 'appName' : 'voucherName'}
+          value={role === 'SUPERADMIN' ? (formData.appName || "") : (formData.voucherName || "")} 
           onChange={handleChange}
           placeholder="e.g. STARBUCK MANAGER"
           className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"

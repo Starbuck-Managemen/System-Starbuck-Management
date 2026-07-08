@@ -136,9 +136,13 @@ app.post('/send-wa', async (req, res) => {
     }
 
     try {
-        const formattedNumber = `${number.replace(/[^0-9]/g, '')}@c.us`;
+        let cleanNumber = number.replace(/[^0-9]/g, '');
+        if (cleanNumber.startsWith('0')) {
+            cleanNumber = '62' + cleanNumber.substring(1);
+        }
+        const formattedNumber = `${cleanNumber}@c.us`;
         await client.sendMessage(formattedNumber, message);
-        console.log(`✅ Pesan WA terkirim ke ${number} via clientId ${clientId}`);
+        console.log(`✅ Pesan WA terkirim ke ${formattedNumber} via clientId ${clientId}`);
         res.json({ success: true });
     } catch (err) {
         console.error(`Gagal mengirim WA via ${clientId}:`, err);
@@ -178,4 +182,15 @@ app.listen(PORT, () => {
     console.log(`\n=========================================`);
     console.log(`🚀 WA Server (Multi-Tenant) berjalan di port ${PORT}`);
     console.log(`=========================================\n`);
+
+    // Real-time router monitor polling every 15 seconds
+    setInterval(async () => {
+        try {
+            const token = process.env.CRON_SECRET || '';
+            const url = `http://127.0.0.1:3000/api/cron/router-monitor?token=${token}`;
+            await fetch(url);
+        } catch (e) {
+            // Abaikan error (contoh: Next.js sedang restart)
+        }
+    }, 15000);
 });

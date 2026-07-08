@@ -23,7 +23,7 @@ export async function createUser(prevState: any, formData: FormData) {
   const phone = formData.get('phone') as string
   const currentUser = await getCurrentUser()
   const role = formData.get('role') as string
-  const adminId = currentUser?.role === 'ADMIN' ? currentUser.id : null
+  const adminId = currentUser?.id || null
 
   if (!name || !username || !email || !password || !role || !phone) {
     return { error: 'All fields are required' }

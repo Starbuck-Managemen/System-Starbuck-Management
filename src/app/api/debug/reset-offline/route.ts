@@ -1,0 +1,1 @@
+﻿import { NextResponse } from "next/server"; import prisma from "@/lib/prisma"; export async function GET() { await prisma.router.updateMany({ data: { isNotifiedOffline: false, lastOfflineAt: null, offlineCause: null, status: "Online" } }); return NextResponse.json({ success: true, message: "Reset OK" }); }

@@ -25,10 +25,13 @@ export default async function UserOrderPage() {
 
   if (!dbUser) return null
 
-  // Get the first router to serve as the default source for profiles
-  const defaultRouter = await prisma.router.findFirst()
-
   let profiles: any[] = []
+  const targetUserId = dbUser?.role === 'USER' && dbUser?.adminId ? dbUser.adminId : dbUser?.id;
+  const routers = await prisma.router.findMany({
+    where: { userId: targetUserId }
+  });
+  const defaultRouter = routers.length > 0 ? routers[0] : null;
+
   if (defaultRouter) {
     profiles = await prisma.profile.findMany({
       where: { routerId: defaultRouter.id }

@@ -11,12 +11,13 @@ export const revalidate = 0;
 export default async function UserManagementPage({
   searchParams
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string, adminId?: string }>
 }) {
   const session = await auth()
   const settings = await getSettings()
   const resolvedParams = await searchParams;
   const q = resolvedParams.q || "";
+  const adminIdFilter = resolvedParams.adminId || "";
 
   let dbUser = null
   if (session?.user && (session.user as any).id) {
@@ -75,10 +76,27 @@ export default async function UserManagementPage({
     }
   }
 
+  if (role === 'SUPERADMIN' && adminIdFilter) {
+    if (adminIdFilter === 'self') {
+      userWhere = { ...userWhere, adminId: null, role: { not: 'SUPERADMIN' } };
+    } else {
+      userWhere = { ...userWhere, adminId: adminIdFilter };
+    }
+  }
+
   const users = await prisma.user.findMany({
     where: userWhere,
+    include: { admin: true },
     orderBy: { createdAt: 'desc' }
   })
+
+  let allAdmins: { id: string, name: string | null }[] = [];
+  if (role === 'SUPERADMIN') {
+    allAdmins = await prisma.user.findMany({
+      where: { role: 'ADMIN' },
+      select: { id: true, name: true }
+    });
+  }
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-[1400px] mx-auto">
@@ -105,7 +123,7 @@ export default async function UserManagementPage({
         
         {/* Search Bar Area */}
         <div className="p-6 border-b border-slate-700/50">
-          <UserSearchInput />
+          <UserSearchInput admins={role === 'SUPERADMIN' ? allAdmins : undefined} />
         </div>
 
         {/* Table */}
@@ -118,6 +136,7 @@ export default async function UserManagementPage({
                 <th className="py-5 px-6 font-semibold">Username</th>
                 <th className="py-5 px-6 font-semibold">Email</th>
                 <th className="py-5 px-6 font-semibold text-center">Role</th>
+                {role === 'SUPERADMIN' && <th className="py-5 px-6 font-semibold text-center">Dibuat Oleh</th>}
                 <th className="py-5 px-6 font-semibold text-center">Status</th>
                 <th className="py-5 px-6 font-semibold text-center w-36">Aksi</th>
               </tr>
@@ -149,6 +168,11 @@ export default async function UserManagementPage({
                       </span>
                     </div>
                   </td>
+                  {role === 'SUPERADMIN' && (
+                    <td className="py-4 px-6 text-center text-slate-300 font-medium">
+                      {user.role === 'SUPERADMIN' ? '-' : (user.admin ? (user.admin.name || user.admin.username) : 'Registrasi Mandiri')}
+                    </td>
+                  )}
                   <td className="py-4 px-6">
                     <div className="flex justify-center">
                       {isOnline ? (

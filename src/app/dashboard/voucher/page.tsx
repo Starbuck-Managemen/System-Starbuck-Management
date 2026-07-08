@@ -14,6 +14,7 @@ export default async function VoucherPage({
 }: {
   searchParams: Promise<{ routerId?: string }>
 }) {
+  const cookieStore = await import("next/headers").then(m => m.cookies())
   const resolvedSearchParams = await searchParams;
   
   const session = await auth()
@@ -28,18 +29,31 @@ export default async function VoucherPage({
   const role = dbUser?.role || 'USER'
 
   let routerQuery: any = { orderBy: { createdAt: 'desc' } }
-  if (role !== 'SUPERADMIN') {
-    routerQuery.where = { userId: dbUser?.id }
+  const targetUserId = dbUser?.role === 'USER' && dbUser?.adminId ? dbUser.adminId : dbUser?.id;
+  if (dbUser?.role !== 'SUPERADMIN') {
+    routerQuery.where = { userId: targetUserId }
   }
   // Ambil daftar router
   const routers = await prisma.router.findMany(routerQuery)
 
-  const selectedRouterId = resolvedSearchParams.routerId || (routers.length > 0 ? routers[0].id : null)
+  const superAdminRouterId = cookieStore.get('superadmin_router_id')?.value
+
+  let selectedRouterId = resolvedSearchParams.routerId
+  
+  if (!selectedRouterId) {
+    if (role === 'SUPERADMIN') {
+      selectedRouterId = superAdminRouterId || undefined
+    } else {
+      selectedRouterId = routers.length > 0 ? routers[0].id : undefined
+    }
+  }
 
   let vouchers: any[] = []
   let errorMessage = ""
 
-  if (selectedRouterId && !routers.some(r => r.id === selectedRouterId) && role !== 'SUPERADMIN') {
+  if (!selectedRouterId && role === 'SUPERADMIN') {
+    errorMessage = "Silakan pilih router di menu Dashboard terlebih dahulu."
+  } else if (selectedRouterId && !routers.some(r => r.id === selectedRouterId) && role !== 'SUPERADMIN') {
     errorMessage = "Akses ditolak: Router ini tidak valid atau bukan milik Anda."
   } else if (selectedRouterId) {
     try {
@@ -89,7 +103,7 @@ export default async function VoucherPage({
         
         {/* Router Selector & Generate Button */}
         {routers.length > 0 ? (
-          <VoucherPageClientHeader routers={routers} selectedRouterId={selectedRouterId} role={role} />
+          <VoucherPageClientHeader routers={routers} selectedRouterId={selectedRouterId || ''} role={role} />
         ) : (
           <Link href="/dashboard/router" className="text-blue-500 hover:underline text-sm">
             + Tambah Router Terlebih Dahulu
@@ -114,7 +128,7 @@ export default async function VoucherPage({
 
         <VoucherTable 
           vouchers={vouchers} 
-          routerId={selectedRouterId} 
+          routerId={selectedRouterId || null} 
           errorMessage={errorMessage} 
           role={role}
         />

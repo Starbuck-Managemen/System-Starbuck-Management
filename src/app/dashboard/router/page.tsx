@@ -16,8 +16,9 @@ export default async function RouterPage() {
   }
 
   let routerQuery: any = { orderBy: { createdAt: 'desc' } }
+  const targetUserId = dbUser?.role === 'USER' && dbUser?.adminId ? dbUser.adminId : dbUser?.id;
   if (dbUser?.role !== 'SUPERADMIN') {
-    routerQuery.where = { userId: dbUser?.id }
+    routerQuery.where = { userId: targetUserId }
   }
   const routers = await prisma.router.findMany(routerQuery)
 

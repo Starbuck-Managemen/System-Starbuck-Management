@@ -45,10 +45,13 @@ export default async function DashboardLayout({
   let hasRouters = true
   let pendingOrdersCount = 0
   let unreadOrdersCount = 0
+  if (dbUser?.role === 'ADMIN' || dbUser?.role === 'USER') {
+    const targetUserId = dbUser?.role === 'USER' && dbUser?.adminId ? dbUser.adminId : dbUser?.id;
+    const rCount = await prisma.router.count({ where: { userId: targetUserId } })
+    hasRouters = rCount > 0
+  }
   
   if (dbUser?.role === 'ADMIN') {
-    const rCount = await prisma.router.count({ where: { userId: dbUser.id } })
-    hasRouters = rCount > 0
     pendingOrdersCount = await prisma.order.count({
       where: { router: { userId: dbUser.id }, status: 'PENDING' }
     })
@@ -150,7 +153,7 @@ export default async function DashboardLayout({
             </Link>
           )}
           
-          {showAdminMenus && (
+          {dbUser?.role === 'ADMIN' && (
             <Link href="/dashboard/wa-bot" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
               <MessageSquare className="h-[18px] w-[18px]" />
               <span className="font-semibold text-[13px]">WA Bot</span>

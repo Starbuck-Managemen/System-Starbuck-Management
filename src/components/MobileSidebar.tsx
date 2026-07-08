@@ -111,7 +111,7 @@ export function MobileSidebar({ dbUser, pendingOrdersCount, unreadOrdersCount, h
                 </Link>
               )}
               
-              {(dbUser?.role === 'SUPERADMIN' || (dbUser?.role === 'ADMIN' && hasRouters)) && (
+              {dbUser?.role === 'ADMIN' && hasRouters && (
                 <Link href="/dashboard/wa-bot" onClick={closeMenu} className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all ${isActive('/dashboard/wa-bot') ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-[#1E293B] hover:text-white'}`}>
                   <MessageSquare className="h-[18px] w-[18px]" />
                   <span className="font-semibold text-[13px]">WA Bot</span>

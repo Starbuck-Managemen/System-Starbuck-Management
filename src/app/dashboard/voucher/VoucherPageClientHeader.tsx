@@ -20,7 +20,9 @@ export function VoucherPageClientHeader({
     <>
       <div className="flex items-center gap-3">
         <RouterIcon className="w-5 h-5 text-slate-400 hidden md:block" />
-        <RouterSelector routers={routers} selectedRouterId={selectedRouterId} />
+        {role !== 'SUPERADMIN' && (
+          <RouterSelector routers={routers} selectedRouterId={selectedRouterId} />
+        )}
         
         {role === 'ADMIN' && (
           <button 

@@ -27,12 +27,22 @@ export default async function AdminOrdersPage() {
     redirect('/dashboard')
   }
 
+  const cookieStore = await import("next/headers").then(m => m.cookies())
+  const superAdminRouterId = cookieStore.get('superadmin_router_id')?.value
+
   let orderWhere: any = undefined;
   let routerWhere: any = undefined;
 
-  if (dbUser.role === 'ADMIN') {
-    orderWhere = { router: { userId: dbUser.id } };
-    routerWhere = { userId: dbUser.id };
+  if (dbUser.role === 'SUPERADMIN') {
+    if (superAdminRouterId) {
+      orderWhere = { routerId: superAdminRouterId }
+    } else {
+      orderWhere = { routerId: 'no-router-selected' }
+    }
+  } else if (dbUser.role === 'ADMIN') {
+    const targetUserId = dbUser?.role === 'USER' && dbUser?.adminId ? dbUser.adminId : dbUser?.id;
+    orderWhere = { router: { userId: targetUserId } };
+    routerWhere = { userId: targetUserId };
   }
 
   const orders = await prisma.order.findMany({
