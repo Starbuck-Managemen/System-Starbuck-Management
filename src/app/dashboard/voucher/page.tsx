@@ -18,24 +18,30 @@ export default async function VoucherPage({
   
   const session = await auth()
   let dbUser = null
-  if (session?.user?.email) {
+  if (session?.user && (session.user as any).id) {
+    dbUser = await prisma.user.findUnique({ where: { id: (session.user as any).id } })
+  } else if (session?.user?.email) {
     dbUser = await prisma.user.findUnique({ where: { email: session.user.email } })
   } else if (session?.user?.name) {
     dbUser = await prisma.user.findFirst({ where: { username: session.user.name } })
   }
   const role = dbUser?.role || 'USER'
 
+  let routerQuery: any = { orderBy: { createdAt: 'desc' } }
+  if (role !== 'SUPERADMIN') {
+    routerQuery.where = { userId: dbUser?.id }
+  }
   // Ambil daftar router
-  const routers = await prisma.router.findMany({
-    orderBy: { createdAt: 'desc' }
-  })
+  const routers = await prisma.router.findMany(routerQuery)
 
   const selectedRouterId = resolvedSearchParams.routerId || (routers.length > 0 ? routers[0].id : null)
 
   let vouchers: any[] = []
   let errorMessage = ""
 
-  if (selectedRouterId) {
+  if (selectedRouterId && !routers.some(r => r.id === selectedRouterId) && role !== 'SUPERADMIN') {
+    errorMessage = "Akses ditolak: Router ini tidak valid atau bukan milik Anda."
+  } else if (selectedRouterId) {
     try {
       const rawVouchers = await getVouchers(selectedRouterId)
       

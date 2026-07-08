@@ -26,7 +26,7 @@ export default async function GenerateVoucherPage({
     }
   })
 
-  if (dbUser?.role !== 'ADMIN') {
+  if (dbUser?.role !== 'ADMIN' && dbUser?.role !== 'SUPERADMIN') {
     redirect('/dashboard') // Redirect non-admins to dashboard
   }
 

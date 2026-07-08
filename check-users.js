@@ -6,7 +6,7 @@ const client = new Client({
 
 async function main() {
   await client.connect();
-  const res = await client.query('SELECT id, name, username, email, role FROM "User"');
+  const res = await client.query('SELECT id, name, host, "apiPort" FROM "Router"');
   console.log(JSON.stringify(res.rows, null, 2));
   await client.end();
 }

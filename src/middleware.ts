@@ -25,13 +25,14 @@ export default auth((req) => {
   const role = (req.auth as any)?.user?.role || (req.auth as any)?.role || 'USER'
   const path = req.nextUrl.pathname
   
-  if (role !== 'ADMIN') {
+  if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
     const forbiddenPaths = [
       '/dashboard/user',
       '/dashboard/router',
       '/dashboard/profile',
       '/dashboard/guide',
-      '/dashboard/voucher/generate'
+      '/dashboard/voucher/generate',
+      '/dashboard/wa-bot'
     ]
     
     if (forbiddenPaths.some(p => path.startsWith(p))) {
@@ -43,5 +44,5 @@ export default auth((req) => {
 })
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

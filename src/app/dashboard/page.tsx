@@ -5,13 +5,41 @@ import { Router as RouterIcon, Users, CreditCard, Activity, ArrowRight, ShieldCh
 import Link from "next/link"
 import { TrafficMonitor } from "./TrafficMonitor"
 import { LiveRouterStatus } from "./router/LiveRouterStatus"
+import { auth } from "@/auth"
+import { redirect } from "next/navigation"
+import { getSettings } from "@/app/dashboard/settings/actions"
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const routers = await prisma.router.findMany({
-    orderBy: { createdAt: 'desc' }
-  })
+  const session = await auth()
+  const settings = await getSettings()
+  
+  let dbUser = null
+  if (session?.user && (session.user as any).id) {
+    dbUser = await prisma.user.findUnique({
+      where: { id: (session.user as any).id }
+    })
+  } else if (session?.user?.email) {
+    dbUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+  } else if (session?.user?.name) {
+    dbUser = await prisma.user.findFirst({
+      where: { username: session.user.name }
+    })
+  }
+
+  let routerQuery: any = { orderBy: { createdAt: 'desc' } }
+  if (dbUser?.role !== 'SUPERADMIN') {
+    routerQuery.where = { userId: dbUser?.id }
+  }
+  const routers = await prisma.router.findMany(routerQuery)
+
+  // Redirect admin/tenant ke halaman tambah router jika belum ada router
+  if (routers.length === 0 && dbUser?.role === 'ADMIN') {
+    redirect('/dashboard/router/create')
+  }
 
   // Ambil router pertama untuk ringkasan
   const primaryRouter = routers.length > 0 ? routers[0] : null
@@ -59,7 +87,7 @@ export default async function DashboardPage() {
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
             Dashboard
           </h1>
-          <p className="text-slate-400 mt-2">Ringkasan sistem manajemen buckNet Anda.</p>
+          <p className="text-slate-400 mt-2">Ringkasan sistem manajemen {settings.appName} Anda.</p>
         </div>
       </div>
 

@@ -1,16 +1,22 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, useEffect } from 'react'
 import { authenticate } from './actions'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Eye, EyeOff, Star } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
+import { getSettings } from "@/app/dashboard/settings/actions"
 
 export default function LoginPage() {
   const [errorMessage, dispatch, isPending] = useActionState(authenticate, undefined)
   const [showPassword, setShowPassword] = useState(false)
+  const [settings, setSettings] = useState({ appName: "STARBUCK MANAGER", appLogo: "/logo.jpg" })
+
+  useEffect(() => {
+    getSettings().then(setSettings)
+  }, [])
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center p-4 bg-[#0F172A]">
@@ -18,10 +24,8 @@ export default function LoginPage() {
         <CardContent className="flex flex-col items-center justify-center pt-2">
           
           {/* Logo & Title */}
-          <div className="flex flex-col items-center justify-center mb-10">
-            <Star className="w-10 h-10 fill-blue-500 text-blue-500 mb-4" />
-            <h1 className="text-2xl font-bold tracking-tight">buckNet Manager</h1>
-            <p className="text-xs text-slate-400 mt-2 font-light">Smart Hotspot Management System</p>
+          <div className="flex flex-col items-center justify-center mb-8">
+            <img src={settings.appLogo} alt={`${settings.appName} Logo`} className="w-72 h-28 object-cover object-center rounded-2xl shadow-lg" />
           </div>
 
           {/* Form */}
@@ -103,7 +107,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-8 text-[11px] text-slate-500 font-medium">
-            © 2026 buckNet Manager
+            &copy; {new Date().getFullYear()} {settings.appName}
           </div>
 
         </CardContent>

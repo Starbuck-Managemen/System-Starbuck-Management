@@ -9,7 +9,7 @@ export async function processOrder(orderId: string, voucherCode: string) {
   
   // Ensure the user is an admin
   const admin = await prisma.user.findUnique({ where: { email: session?.user?.email || "" }})
-  if (admin?.role !== 'ADMIN') {
+  if (admin?.role !== 'ADMIN' && admin?.role !== 'SUPERADMIN') {
     return { success: false, error: "Tidak diizinkan." }
   }
 
@@ -34,7 +34,7 @@ export async function rejectOrder(orderId: string, reason: string) {
   const session = await auth()
   
   const admin = await prisma.user.findUnique({ where: { email: session?.user?.email || "" }})
-  if (admin?.role !== 'ADMIN') {
+  if (admin?.role !== 'ADMIN' && admin?.role !== 'SUPERADMIN') {
     return { success: false, error: "Tidak diizinkan." }
   }
 

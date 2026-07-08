@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma"
+import { auth } from "@/auth"
 import { getLiveReportSummary } from "./actions"
 import ReportClient from "./ReportClient"
 import { RouterSelector } from "@/app/dashboard/voucher/RouterSelector"
@@ -13,17 +14,30 @@ export default async function ReportPage({
   searchParams: Promise<{ routerId?: string }>
 }) {
   const resolvedSearchParams = await searchParams;
+  const session = await auth()
+  let dbUser = null
+  if (session?.user && (session.user as any).id) {
+    dbUser = await prisma.user.findUnique({
+      where: { id: (session.user as any).id }
+    })
+  }
+
+  let routerQuery: any = { orderBy: { createdAt: 'desc' } }
+  if (dbUser?.role !== 'SUPERADMIN') {
+    routerQuery.where = { userId: dbUser?.id }
+  }
+  
   // Ambil daftar router
-  const routers = await prisma.router.findMany({
-    orderBy: { createdAt: 'desc' }
-  })
+  const routers = await prisma.router.findMany(routerQuery)
 
   const selectedRouterId = resolvedSearchParams.routerId || (routers.length > 0 ? routers[0].id : null)
 
   let reportData = null
   let errorMessage = ""
 
-  if (selectedRouterId) {
+  if (selectedRouterId && !routers.some(r => r.id === selectedRouterId) && dbUser?.role !== 'SUPERADMIN') {
+    errorMessage = "Akses ditolak: Router ini tidak valid atau bukan milik Anda."
+  } else if (selectedRouterId) {
     const res = await getLiveReportSummary(selectedRouterId)
     if (res.success) {
       reportData = res.data

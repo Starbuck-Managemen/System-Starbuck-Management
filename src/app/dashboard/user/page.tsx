@@ -3,6 +3,10 @@ import Link from "next/link"
 import prisma from "@/lib/prisma"
 import { auth } from "@/auth"
 import UserSearchInput from "./UserSearchInput"
+import { getSettings } from "@/app/dashboard/settings/actions"
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function UserManagementPage({
   searchParams
@@ -10,17 +14,69 @@ export default async function UserManagementPage({
   searchParams: Promise<{ q?: string }>
 }) {
   const session = await auth()
+  const settings = await getSettings()
   const resolvedParams = await searchParams;
   const q = resolvedParams.q || "";
 
-  const users = await prisma.user.findMany({
-    where: q ? {
+  let dbUser = null
+  if (session?.user && (session.user as any).id) {
+    dbUser = await prisma.user.findUnique({
+      where: { id: (session.user as any).id }
+    })
+  } else if (session?.user?.email) {
+    dbUser = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+  } else if (session?.user?.name) {
+    dbUser = await prisma.user.findFirst({
+      where: { username: session.user.name }
+    })
+  }
+
+  const role = dbUser?.role || 'USER';
+
+  let userWhere: any = undefined;
+  
+  if (role === 'SUPERADMIN') {
+    // SuperAdmin sees all users. If `q` is present, it will be added below.
+    userWhere = {};
+  } else if (role === 'ADMIN' && dbUser?.id) {
+    // Admin ONLY sees themselves and users they created (adminId = their ID)
+    userWhere = {
       OR: [
-        { name: { contains: q, mode: 'insensitive' } },
-        { username: { contains: q, mode: 'insensitive' } },
-        { email: { contains: q, mode: 'insensitive' } },
+        { id: dbUser.id },
+        { adminId: dbUser.id }
       ]
-    } : undefined,
+    };
+  } else if (role === 'USER' && dbUser?.id) {
+    // Regular User ONLY sees themselves
+    userWhere = {
+      id: dbUser.id
+    };
+  } else {
+    // Fallback: If no role or dbUser.id, return NO users (prevent leak)
+    userWhere = {
+      id: 'invalid-id-prevent-leak'
+    };
+  }
+
+  if (q) {
+    userWhere = {
+      ...userWhere,
+      AND: [
+        {
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { username: { contains: q, mode: 'insensitive' } },
+            { email: { contains: q, mode: 'insensitive' } },
+          ]
+        }
+      ]
+    }
+  }
+
+  const users = await prisma.user.findMany({
+    where: userWhere,
     orderBy: { createdAt: 'desc' }
   })
 
@@ -35,7 +91,7 @@ export default async function UserManagementPage({
             User Management
           </h1>
           <p className="text-[13px] text-slate-400 mt-2 font-medium">
-            Kelola seluruh akun pengguna buckNet Manager.
+            Kelola seluruh akun pengguna {settings.appName}.
           </p>
         </div>
         <Link href="/dashboard/user/add" className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shrink-0 shadow-sm">

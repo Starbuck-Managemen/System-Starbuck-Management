@@ -2,6 +2,7 @@ import { EditForm } from "./EditForm"
 import { Server } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { notFound } from "next/navigation"
+import { auth } from "@/auth"
 
 export default async function EditRouterPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -11,6 +12,17 @@ export default async function EditRouterPage({ params }: { params: Promise<{ id:
 
   if (!router) {
     notFound()
+  }
+
+  const session = await auth()
+  const role = (session?.user as any)?.role || 'USER'
+  
+  let adminUsers: any[] = []
+  if (role === 'SUPERADMIN') {
+    adminUsers = await prisma.user.findMany({
+      where: { role: 'ADMIN' },
+      select: { id: true, name: true, username: true }
+    })
   }
 
   return (
@@ -31,7 +43,7 @@ export default async function EditRouterPage({ params }: { params: Promise<{ id:
 
       {/* Form Section */}
       <div className="bg-[#1E293B] rounded-xl border border-slate-800 shadow-sm p-6 md:p-8">
-        <EditForm initialData={router} />
+        <EditForm initialData={router} adminUsers={adminUsers} sessionRole={role} />
       </div>
     </div>
   )

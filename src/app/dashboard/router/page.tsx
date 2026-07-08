@@ -1,13 +1,25 @@
 import prisma from "@/lib/prisma"
+import { auth } from "@/auth"
 import Link from "next/link"
 import { Plus, Edit, Trash2, Server } from "lucide-react"
 import { deleteRouter } from "./actions"
 import { LiveRouterStatus } from "./LiveRouterStatus"
 
 export default async function RouterPage() {
-  const routers = await prisma.router.findMany({
-    orderBy: { createdAt: 'desc' }
-  })
+  const session = await auth()
+  
+  let dbUser = null
+  if (session?.user && (session.user as any).id) {
+    dbUser = await prisma.user.findUnique({
+      where: { id: (session.user as any).id }
+    })
+  }
+
+  let routerQuery: any = { orderBy: { createdAt: 'desc' } }
+  if (dbUser?.role !== 'SUPERADMIN') {
+    routerQuery.where = { userId: dbUser?.id }
+  }
+  const routers = await prisma.router.findMany(routerQuery)
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-[1400px] mx-auto">

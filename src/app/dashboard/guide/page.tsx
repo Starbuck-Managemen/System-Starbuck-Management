@@ -1,9 +1,12 @@
 "use client";
 
 import { BookOpen, Info, Wifi, Ticket, Tag, Activity, Settings, HelpCircle, FileText, Users, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getSettings } from "@/app/dashboard/settings/actions";
 
 export default function GuidePage() {
+  const [settings, setSettings] = useState({ appName: "STARBUCK MANAGER", appLogo: "/logo.jpg" })
+  useEffect(() => { getSettings().then(setSettings) }, [])
   const [activeTab, setActiveTab] = useState('pengantar');
 
   const tabs = [
@@ -21,7 +24,7 @@ export default function GuidePage() {
           <div className="prose prose-invert max-w-none prose-slate">
             <div className="bg-blue-900/10 border-l-4 border-blue-500 p-5 rounded-r-xl mb-4">
               <p className="text-blue-100 text-lg leading-relaxed m-0">
-                <strong>buckNet Manager</strong> dirancang untuk menggantikan rutinitas rumit di Winbox. Dengan sistem ini, Anda bisa membuat voucher, mengatur harga, dan memantau pendapatan dari mana saja hanya melalui web browser.
+                <strong>{settings.appName}</strong> dirancang untuk menggantikan rutinitas rumit di Winbox. Dengan sistem ini, Anda bisa membuat voucher, mengatur harga, dan memantau pendapatan dari mana saja hanya melalui web browser.
               </p>
             </div>
             
@@ -237,7 +240,9 @@ export default function GuidePage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Panduan Penggunaan</h1>
-          <p className="text-sm text-slate-400 mt-1">Dokumentasi resmi dan cara pakai sistem buckNet Manager</p>
+          <p className="text-[13px] text-slate-400 mt-2 font-medium">
+            Dokumentasi resmi dan cara pakai sistem {settings.appName}
+          </p>
         </div>
       </div>
 

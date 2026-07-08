@@ -82,13 +82,13 @@ export async function GET(request: Request) {
             const timeStr = daysLeft > 1 ? `${daysLeft} Hari` : `${hoursLeft} Jam`;
 
             // Kirim pesan!
-            const message = `Halo Kak!\n\nIni adalah pesan otomatis dari *buckNet*.\nMasa aktif langganan internet untuk akun *${v.name}* Anda akan habis dalam waktu *${timeStr}*.\n\nMohon untuk segera melakukan perpanjangan agar koneksi internet Anda tidak terputus.\n\nTerima kasih! 🚀`;
+            const message = `hallo kak!\nini adalah pesan otomatis dari admin WIFI STARBUCK.\nMasa aktif langganan internet untuk akun *${v.name}* Anda akan habis dalam waktu *${timeStr}*.\n\nMohon untuk segera melakukan perpanjangan agar koneksi internet Anda tidak terputus.\n\nTerima kasih! 🚀`;
 
             try {
               const waResponse = await fetch('http://127.0.0.1:3001/send-wa', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ number: waNumber, message })
+                body: JSON.stringify({ clientId: router.userId, number: waNumber, message })
               });
 
               if (waResponse.ok) {

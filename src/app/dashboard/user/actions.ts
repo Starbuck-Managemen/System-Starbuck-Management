@@ -3,6 +3,17 @@
 import prisma from "@/lib/prisma"
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { auth } from "@/auth"
+
+async function getCurrentUser() {
+  const session = await auth();
+  if (!session?.user) return null;
+  let dbUser = await prisma.user.findUnique({ where: { id: (session.user as any).id } });
+  if (!dbUser && session.user.email) {
+    dbUser = await prisma.user.findUnique({ where: { email: session.user.email } });
+  }
+  return dbUser;
+}
 
 export async function createUser(prevState: any, formData: FormData) {
   const name = formData.get('name') as string
@@ -10,7 +21,9 @@ export async function createUser(prevState: any, formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const phone = formData.get('phone') as string
+  const currentUser = await getCurrentUser()
   const role = formData.get('role') as string
+  const adminId = currentUser?.role === 'ADMIN' ? currentUser.id : null
 
   if (!name || !username || !email || !password || !role || !phone) {
     return { error: 'All fields are required' }
@@ -27,13 +40,24 @@ export async function createUser(prevState: any, formData: FormData) {
         phone: cleanedPhone,
         password,
         role,
-        status: 'Active'
+        status: 'Active',
+        adminId
       }
     })
   } catch (error: any) {
-    // Unique constraint failed on the fields: (`username`) or (`email`)
+    // Unique constraint failed
     if (error.code === 'P2002') {
-      return { error: 'Username or Email already exists' }
+      const target = error.meta?.target as string[] | undefined;
+      if (target && target.includes('phone')) {
+        return { error: 'No. WhatsApp sudah digunakan oleh akun lain' }
+      }
+      if (target && target.includes('email')) {
+        return { error: 'Email sudah digunakan oleh akun lain' }
+      }
+      if (target && target.includes('username')) {
+        return { error: 'Username sudah digunakan oleh akun lain' }
+      }
+      return { error: 'Username, Email, atau No. WhatsApp sudah digunakan' }
     }
     return { error: 'Failed to create user: ' + error.message }
   }
@@ -43,7 +67,16 @@ export async function createUser(prevState: any, formData: FormData) {
 }
 
 export async function deleteUser(id: string) {
+  const currentUser = await getCurrentUser()
+  
   try {
+    if (currentUser?.role === 'ADMIN') {
+      const userToDelete = await prisma.user.findUnique({ where: { id } })
+      if (!userToDelete || userToDelete.adminId !== currentUser.id) {
+        throw new Error("Unauthorized to delete this user")
+      }
+    }
+
     await prisma.user.delete({
       where: { id }
     })
@@ -94,6 +127,14 @@ export async function updateUser(id: string, prevState: any, formData: FormData)
       successMessage = 'Edit data user berhasil'
     }
 
+    const currentUser = await getCurrentUser()
+    if (currentUser?.role === 'ADMIN') {
+      const userToUpdate = await prisma.user.findUnique({ where: { id } })
+      if (!userToUpdate || (userToUpdate.adminId !== currentUser.id && userToUpdate.id !== currentUser.id)) {
+        throw new Error("Unauthorized to edit this user")
+      }
+    }
+
     await prisma.user.update({
       where: { id },
       data: updateData
@@ -102,7 +143,17 @@ export async function updateUser(id: string, prevState: any, formData: FormData)
     return { success: successMessage }
   } catch (error: any) {
     if (error.code === 'P2002') {
-      return { error: 'Username atau Email sudah digunakan' }
+      const target = error.meta?.target as string[] | undefined;
+      if (target && target.includes('phone')) {
+        return { error: 'No. WhatsApp sudah digunakan oleh akun lain' }
+      }
+      if (target && target.includes('email')) {
+        return { error: 'Email sudah digunakan oleh akun lain' }
+      }
+      if (target && target.includes('username')) {
+        return { error: 'Username sudah digunakan oleh akun lain' }
+      }
+      return { error: 'Username, Email, atau No. WhatsApp sudah digunakan' }
     }
     return { error: 'Gagal memperbarui user: ' + error.message }
   }

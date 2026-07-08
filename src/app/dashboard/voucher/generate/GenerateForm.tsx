@@ -40,7 +40,7 @@ export function GenerateForm({
         let dbContacts: any[] = []
 
         try {
-          const res1 = await fetch('http://127.0.0.1:3001/contacts')
+          const res1 = await fetch('/api/wa/contacts')
           if (res1.ok) {
             const data1 = await res1.json()
             botContacts = data1.contacts || []
@@ -110,10 +110,21 @@ export function GenerateForm({
               const hour = new Date().getHours();
               const greeting = hour < 4 ? "Selamat Malam" : hour < 11 ? "Selamat Pagi" : hour < 15 ? "Selamat Siang" : hour < 18 ? "Selamat Sore" : "Selamat Malam";
               
-              const message = `${greeting} kak *${displayName}*! 👋\n\nIni pesan otomatis dari Admin WiFi STARBUCK. Pendaftaran langganan internet kakak sudah berhasil kami proses ya.\n\nBerikut adalah detail akses WiFi kakak:\n🎟️ Kode Voucher: *${name}*\n📦 Paket: *${profile}*\n\nSelamat menikmati koneksi internet kami! Jika ada kendala, jangan sungkan untuk menghubungi kami. Terima kasih! 🙏`;
+              const profilePrices: Record<string, number> = {
+                "1-JAM": 10000,
+                "6-Jam": 30000,
+                "1-hari": 45000,
+                "3-Hari": 75000,
+                "15-Hari": 100000,
+                "1-BULAN": 150000,
+              };
+              const price = profile && profilePrices[profile] ? profilePrices[profile] : 0;
+              const priceFormatted = price > 0 ? `Rp ${new Intl.NumberFormat("id-ID").format(price)}` : "-";
+
+              const message = `${greeting} kak *${displayName}*! 👋\n\nIni pesan otomatis dari Admin WiFi STARBUCK. Pendaftaran langganan internet kakak sudah berhasil kami proses ya.\n\nBerikut adalah detail akses WiFi kakak:\n🎟️ Kode Voucher: *${name}*\n📦 Paket: *${profile}*\n💵 Harga: *${priceFormatted}*\n\nSelamat menikmati koneksi internet kami! Jika ada kendala, jangan sungkan untuk menghubungi kami. Terima kasih! 🙏`;
               
               try {
-                const waResponse = await fetch('http://127.0.0.1:3001/send-wa', {
+                const waResponse = await fetch('/api/wa/send', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ number: waNumber, message })

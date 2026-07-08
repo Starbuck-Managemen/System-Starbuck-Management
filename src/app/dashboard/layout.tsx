@@ -1,5 +1,5 @@
 import { auth, signOut } from "@/auth"
-import { Home, Users, Ticket, Wifi, FileText, Settings, Search, Bell, Menu, Star, User, Tag, BookOpen, ShoppingCart, ClipboardList } from "lucide-react"
+import { Home, Users, Ticket, Wifi, FileText, Settings, Search, Bell, Menu, Star, User, Tag, BookOpen, ShoppingCart, ClipboardList, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import { UserNav } from "@/components/UserNav"
 import { Breadcrumb } from "@/components/Breadcrumb"
@@ -9,6 +9,7 @@ import { MobileSidebar } from "@/components/MobileSidebar"
 import { Toaster } from "sonner"
 import { SessionPing } from "@/components/SessionPing"
 import { ForceLogout } from "@/components/ForceLogout"
+import { getSettings } from "@/app/dashboard/settings/actions"
 
 import prisma from "@/lib/prisma"
 
@@ -18,6 +19,7 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const session = await auth()
+  const settings = await getSettings()
   
   let dbUser = null
   if (session?.user && (session.user as any).id) {
@@ -40,10 +42,17 @@ export default async function DashboardLayout({
     }
   }
   
+  let hasRouters = true
   let pendingOrdersCount = 0
   let unreadOrdersCount = 0
   
   if (dbUser?.role === 'ADMIN') {
+    const rCount = await prisma.router.count({ where: { userId: dbUser.id } })
+    hasRouters = rCount > 0
+    pendingOrdersCount = await prisma.order.count({
+      where: { router: { userId: dbUser.id }, status: 'PENDING' }
+    })
+  } else if (dbUser?.role === 'SUPERADMIN') {
     pendingOrdersCount = await prisma.order.count({
       where: { status: 'PENDING' }
     })
@@ -60,6 +69,9 @@ export default async function DashboardLayout({
   // TODO: Ganti dengan data error aktual dari backend
   const errorCount = 0 
 
+  const showAdminMenus = dbUser?.role === 'SUPERADMIN' || (dbUser?.role === 'ADMIN' && hasRouters);
+  const showUserMenus = (dbUser?.role !== 'ADMIN' && dbUser?.role !== 'SUPERADMIN') || showAdminMenus;
+
   return (
     <div className="flex min-h-screen w-full bg-[#0F172A] text-slate-100 font-sans print:bg-white print:text-black">
       <Toaster theme="dark" richColors position="top-center" />
@@ -67,9 +79,9 @@ export default async function DashboardLayout({
       {/* Sidebar */}
       <aside className="hidden w-[260px] flex-col bg-[#111827] border-r border-slate-800 md:flex print:hidden">
         <div className="flex h-20 items-center px-6 gap-3 border-b border-slate-800">
-          <Star className="w-7 h-7 fill-blue-600 text-blue-600" />
+          <img src={settings.appLogo} alt="Logo" className="w-8 h-8 object-contain rounded-md" />
           <div className="flex flex-col">
-            <span className="font-bold text-xl leading-tight tracking-wide">buckNet</span>
+            <span className="font-bold text-xl leading-tight tracking-wide truncate max-w-[170px]" title={settings.appName}>{settings.appName}</span>
             <span className="text-[11px] text-slate-400 font-medium">Manager</span>
           </div>
         </div>
@@ -79,14 +91,14 @@ export default async function DashboardLayout({
             <span className="font-semibold text-[13px]">Dashboard</span>
           </Link>
           
-          {dbUser?.role === 'ADMIN' && (
+          {showAdminMenus && (
             <Link href="/dashboard/user" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
               <Users className="h-[18px] w-[18px]" />
               <span className="font-semibold text-[13px]">User</span>
             </Link>
           )}
 
-          {dbUser?.role !== 'ADMIN' && (
+          {dbUser?.role === 'USER' && (
             <Link href="/dashboard/order" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
               <ShoppingCart className="h-[18px] w-[18px]" />
               <span className="font-semibold text-[13px] flex-1">Beli Voucher</span>
@@ -98,39 +110,54 @@ export default async function DashboardLayout({
             </Link>
           )}
 
-          <Link href="/dashboard/voucher" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
-            <Ticket className="h-[18px] w-[18px]" />
-            <span className="font-semibold text-[13px]">Data Voucher</span>
-          </Link>
+          {showUserMenus && (
+            <Link href="/dashboard/voucher" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
+              <Ticket className="h-[18px] w-[18px]" />
+              <span className="font-semibold text-[13px]">Data Voucher</span>
+            </Link>
+          )}
 
-          {dbUser?.role === 'ADMIN' && (
+          {(dbUser?.role === 'ADMIN' || dbUser?.role === 'SUPERADMIN') && (
             <>
               <Link href="/dashboard/router" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
                 <Wifi className="h-[18px] w-[18px]" />
                 <span className="font-semibold text-[13px]">Router</span>
               </Link>
-              <Link href="/dashboard/profile" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
-                <Tag className="h-[18px] w-[18px]" />
-                <span className="font-semibold text-[13px]">Profile & Harga</span>
-              </Link>
-              <Link href="/dashboard/orders" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
-                <ClipboardList className="h-[18px] w-[18px]" />
-                <span className="font-semibold text-[13px] flex-1">Pesanan Masuk</span>
-                {pendingOrdersCount > 0 && (
-                  <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white shadow-[0_0_10px_rgba(244,63,94,0.5)] animate-pulse">
-                    {pendingOrdersCount}
-                  </span>
-                )}
-              </Link>
+              {showAdminMenus && (
+                <>
+                  <Link href="/dashboard/profile" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
+                    <Tag className="h-[18px] w-[18px]" />
+                    <span className="font-semibold text-[13px]">Profile & Harga</span>
+                  </Link>
+                  <Link href="/dashboard/orders" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
+                    <ClipboardList className="h-[18px] w-[18px]" />
+                    <span className="font-semibold text-[13px] flex-1">Pesanan Masuk</span>
+                    {pendingOrdersCount > 0 && (
+                      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white shadow-[0_0_10px_rgba(244,63,94,0.5)] animate-pulse">
+                        {pendingOrdersCount}
+                      </span>
+                    )}
+                  </Link>
+                </>
+              )}
             </>
           )}
 
-          <Link href="/dashboard/report" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
-            <FileText className="h-[18px] w-[18px]" />
-            <span className="font-semibold text-[13px]">Laporan</span>
-          </Link>
+          {showAdminMenus && (
+            <Link href="/dashboard/report" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
+              <FileText className="h-[18px] w-[18px]" />
+              <span className="font-semibold text-[13px]">Laporan</span>
+            </Link>
+          )}
           
-          {dbUser?.role === 'ADMIN' && (
+          {showAdminMenus && (
+            <Link href="/dashboard/wa-bot" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
+              <MessageSquare className="h-[18px] w-[18px]" />
+              <span className="font-semibold text-[13px]">WA Bot</span>
+            </Link>
+          )}
+          
+          {showAdminMenus && (
             <Link href="/dashboard/guide" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
               <BookOpen className="h-[18px] w-[18px]" />
               <span className="font-semibold text-[13px]">Panduan Penggunaan</span>
@@ -149,6 +176,9 @@ export default async function DashboardLayout({
               dbUser={dbUser} 
               pendingOrdersCount={pendingOrdersCount} 
               unreadOrdersCount={unreadOrdersCount} 
+              hasRouters={hasRouters}
+              appName={settings.appName}
+              appLogo={settings.appLogo}
             />
             <div className="hidden md:flex text-[13px] font-medium text-slate-400">
               <Breadcrumb />

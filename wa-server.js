@@ -1,6 +1,5 @@
 require('dotenv').config();
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
 const express = require('express');
 const cors = require('cors');
 
@@ -8,80 +7,157 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Inisialisasi WA Client
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+const sessions = new Map();
+const qrCodes = new Map();
+
+// Helper to init client
+function initClient(clientId) {
+    if (sessions.has(clientId)) {
+        return sessions.get(clientId);
     }
+
+    console.log(`[WA] Initializing client for ${clientId}...`);
+    const client = new Client({
+        authStrategy: new LocalAuth({ clientId }),
+        puppeteer: {
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        }
+    });
+
+    client.on('qr', (qr) => {
+        console.log(`[WA] QR received for ${clientId}`);
+        qrCodes.set(clientId, qr);
+    });
+
+    client.on('ready', () => {
+        console.log(`[WA] Client ${clientId} is ready!`);
+        qrCodes.delete(clientId);
+        
+        // Optional: trigger Next.js cron for this client if needed
+        // triggerNextJsCron(clientId);
+    });
+
+    client.on('authenticated', () => {
+        console.log(`[WA] Client ${clientId} authenticated`);
+        qrCodes.delete(clientId);
+    });
+
+    client.on('auth_failure', msg => {
+        console.error(`[WA] Auth failure for ${clientId}:`, msg);
+        qrCodes.delete(clientId);
+        client.destroy().catch(console.error);
+        sessions.delete(clientId);
+    });
+
+    client.on('disconnected', (reason) => {
+        console.log(`[WA] Client ${clientId} disconnected:`, reason);
+        qrCodes.delete(clientId);
+        client.destroy().catch(console.error);
+        sessions.delete(clientId);
+    });
+
+    client.initialize().catch(err => {
+        console.error(`[WA] Error initializing ${clientId}:`, err);
+        sessions.delete(clientId);
+    });
+
+    sessions.set(clientId, client);
+    return client;
+}
+
+app.post('/start', (req, res) => {
+    const { clientId } = req.body;
+    if (!clientId) return res.status(400).json({ error: 'clientId is required' });
+
+    if (!sessions.has(clientId)) {
+        initClient(clientId);
+        return res.json({ status: 'STARTING' });
+    }
+    
+    return res.json({ status: 'ALREADY_EXISTS' });
 });
 
-let isReady = false;
+app.get('/status/:clientId', (req, res) => {
+    const { clientId } = req.params;
+    
+    if (!sessions.has(clientId)) {
+        return res.json({ status: 'NOT_STARTED' });
+    }
 
-client.on('qr', (qr) => {
-    console.log('\n=========================================');
-    console.log('📱 SCAN QR CODE INI DENGAN WHATSAPP BOT:');
-    console.log('=========================================\n');
-    qrcode.generate(qr, { small: true });
+    const client = sessions.get(clientId);
+    
+    if (qrCodes.has(clientId)) {
+        return res.json({ status: 'QR_READY', qr: qrCodes.get(clientId) });
+    }
+    
+    if (client.info) {
+        return res.json({ status: 'READY', pushname: client.info.pushname });
+    }
+
+    return res.json({ status: 'STARTING' });
 });
 
-client.on('ready', () => {
-    isReady = true;
-    console.log('\n✅ Bot WhatsApp sudah SIAP dan TERHUBUNG!\n');
-    setTimeout(triggerNextJsCron, 5000);
+app.post('/logout', async (req, res) => {
+    const { clientId } = req.body;
+    if (!clientId) return res.status(400).json({ error: 'clientId is required' });
+    
+    if (sessions.has(clientId)) {
+        const client = sessions.get(clientId);
+        try {
+            await client.logout();
+        } catch (e) {
+            console.error(e);
+        }
+        sessions.delete(clientId);
+        qrCodes.delete(clientId);
+    }
+    res.json({ success: true });
 });
 
-client.on('auth_failure', msg => {
-    console.error('AUTHENTICATION FAILURE', msg);
-});
-
-client.on('disconnected', (reason) => {
-    isReady = false;
-    console.log('WhatsApp terputus', reason);
-});
-
-client.initialize();
-
-// Endpoint untuk menerima perintah kirim WA dari buckNet Manager
 app.post('/send-wa', async (req, res) => {
-    if (!isReady) {
-        return res.status(503).json({ error: 'WhatsApp Bot belum siap atau belum di-scan.' });
+    const { clientId, number, message } = req.body;
+    
+    if (!clientId) {
+        return res.status(400).json({ error: 'clientId is required for multi-tenant WA' });
+    }
+    
+    if (!sessions.has(clientId)) {
+        return res.status(503).json({ error: 'WhatsApp Bot belum siap atau belum di-scan untuk pengguna ini.' });
     }
 
-    const { number, message } = req.body;
+    const client = sessions.get(clientId);
+    
+    if (!client.info) {
+        return res.status(503).json({ error: 'Client belum terhubung sepenuhnya.' });
+    }
+
     if (!number || !message) {
         return res.status(400).json({ error: 'Number dan Message diperlukan' });
     }
 
     try {
         const formattedNumber = `${number.replace(/[^0-9]/g, '')}@c.us`;
-        
-        // Dapatkan ID valid dari WhatsApp server untuk menghindari error "No LID for user"
-        const contactId = await client.getNumberId(formattedNumber);
-        
-        if (!contactId) {
-            console.error(`Nomor ${number} tidak terdaftar di WhatsApp.`);
-            return res.status(400).json({ error: 'Nomor WhatsApp tidak terdaftar' });
-        }
-
-        await client.sendMessage(contactId._serialized, message);
-        console.log(`✅ Pesan WA terkirim ke ${number}`);
+        await client.sendMessage(formattedNumber, message);
+        console.log(`✅ Pesan WA terkirim ke ${number} via clientId ${clientId}`);
         res.json({ success: true });
     } catch (err) {
-        console.error('Gagal mengirim WA:', err);
+        console.error(`Gagal mengirim WA via ${clientId}:`, err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// Endpoint untuk mengambil daftar kontak WA yang tersimpan
 app.get('/contacts', async (req, res) => {
-    if (!isReady) {
-        return res.status(503).json({ error: 'WhatsApp Bot belum siap atau belum di-scan.' });
+    const { clientId } = req.query;
+    if (!clientId || !sessions.has(clientId)) {
+        return res.status(503).json({ error: 'WhatsApp Bot belum siap untuk pengguna ini.' });
+    }
+    const client = sessions.get(clientId);
+    if (!client.info) {
+        return res.status(503).json({ error: 'Client belum terhubung sepenuhnya.' });
     }
 
     try {
         const contacts = await client.getContacts();
-        // Filter: Hanya kontak personal (bukan grup) yang sudah tersimpan di HP/Akun WA
         const savedContacts = contacts
             .filter(c => c.isMyContact && !c.isGroup)
             .map(c => ({
@@ -89,10 +165,7 @@ app.get('/contacts', async (req, res) => {
                 name: c.name || c.pushname || c.shortName || c.number,
                 number: c.number
             }));
-            
-        // Urutkan berdasarkan nama
         savedContacts.sort((a, b) => a.name.localeCompare(b.name));
-        
         res.json({ contacts: savedContacts });
     } catch (err) {
         console.error('Gagal mengambil kontak WA:', err);
@@ -100,67 +173,9 @@ app.get('/contacts', async (req, res) => {
     }
 });
 
-// Fungsi untuk memicu pengecekan otomatis (Cron) ke Next.js API
-async function triggerNextJsCron() {
-    try {
-        console.log('🔄 Memulai Patroli Otomatis ke MikroTik...');
-        const response = await fetch('http://127.0.0.1:3000/api/cron/wa-reminder', {
-            method: 'GET'
-        });
-        if (response.ok) {
-            const data = await response.json();
-            console.log(`✅ Patroli selesai: ${data.message}`);
-        } else {
-            console.log(`⚠️ Patroli gagal dengan status: ${response.status}`);
-        }
-    } catch (err) {
-        console.log('⚠️ Gagal terhubung ke buckNet (Pastikan Next.js berjalan di port 3000)');
-    }
-}
-
-// Set Interval Patroli Otomatis (Setiap 24 Jam = 24 * 60 * 60 * 1000 ms)
-setInterval(triggerNextJsCron, 24 * 60 * 60 * 1000); 
-
-// Fungsi pemantau Downtime Router (tiap 5 menit)
-async function triggerRouterMonitorCron() {
-    if (!isReady) return;
-    try {
-        const response = await fetch('http://127.0.0.1:3000/api/cron/router-monitor', {
-            method: 'GET'
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            
-            if (data.logs && data.logs.length > 0) {
-                // Gunakan nomor admin dari ENV, pastikan formatnya benar
-                const adminPhone = process.env.ADMIN_PHONE;
-                if (!adminPhone) {
-                    console.error('⚠️ ADMIN_PHONE belum diatur di environment/script. Notifikasi mati/hidup tidak terkirim via WA.');
-                    return;
-                }
-                
-                const formattedNumber = `${adminPhone.replace(/[^0-9]/g, '')}@c.us`;
-                const contactId = await client.getNumberId(formattedNumber);
-                
-                if (contactId) {
-                    for (const log of data.logs) {
-                        await client.sendMessage(contactId._serialized, log.message);
-                        console.log(`[ROUTER-MONITOR] Pesan notifikasi terkirim ke Admin (${adminPhone})`);
-                    }
-                }
-            }
-        }
-    } catch (err) {
-        // Abaikan jika Next.js belum siap
-    }
-}
-
-// Set Interval Router Monitor (Setiap 5 Menit)
-setInterval(triggerRouterMonitorCron, 5 * 60 * 1000);
-
 const PORT = 3001;
 app.listen(PORT, () => {
-    console.log(`\n🚀 Service WhatsApp Bot berjalan di port ${PORT}`);
-    console.log(`Menunggu inisialisasi browser WhatsApp...\n`);
+    console.log(`\n=========================================`);
+    console.log(`🚀 WA Server (Multi-Tenant) berjalan di port ${PORT}`);
+    console.log(`=========================================\n`);
 });

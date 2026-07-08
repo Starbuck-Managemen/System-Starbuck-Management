@@ -262,7 +262,12 @@ export async function syncMikrotikToDatabase(routerId: string) {
 
     const transactions = report.data.transactions
     
-    const user = await prisma.user.findFirst()
+    const router = await prisma.router.findUnique({ where: { id: routerId } })
+    if (!router || !router.userId) {
+      return { success: false, message: "Router tidak ditemukan atau belum memiliki Admin" }
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: router.userId } })
     if (!user) {
       return { success: false, message: "User Admin tidak ditemukan" }
     }

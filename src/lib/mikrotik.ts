@@ -653,3 +653,127 @@ export async function getRouterUptime(routerId: string) {
   }
 }
 
+
+/**
+ * Mengambil log sistem dari router MikroTik untuk analisa penyebab disconnect
+ * Membaca /log dan memfilter entri yang relevan dengan disconnect/restart
+ */
+export async function getRouterLogs(routerId: string, maxEntries: number = 50) {
+  let client
+  try {
+    client = await getMikrotikClient(routerId)
+    const logMenu = client.api().menu("/log")
+    const allLogs = await logMenu.get()
+    
+    // Ambil entri terakhir saja
+    const recentLogs = allLogs.slice(-maxEntries)
+    
+    return recentLogs.map((entry: any) => ({
+      time: entry.time || "",
+      topics: entry.topics || "",
+      message: entry.message || "",
+    }))
+  } catch (error) {
+    console.error("Error getRouterLogs:", error)
+    return []
+  } finally {
+    if (client) client.close()
+  }
+}
+
+/**
+ * Menganalisa log router untuk menentukan penyebab disconnect
+ * Mengembalikan ringkasan analisis dalam bahasa Indonesia
+ */
+export function analyzeRouterLogs(logs: { time: string; topics: string; message: string }[]): {
+  cause: string;
+  details: string[];
+} {
+  const details: string[] = []
+  let cause = "Tidak diketahui"
+  
+  // Kategori log yang relevan
+  let hasPowerEvent = false
+  let hasInterfaceDown = false
+  let hasDhcpIssue = false
+  let hasWirelessDisconnect = false
+  let hasSystemReboot = false
+  let hasLoginFailure = false
+  let hasPppoeIssue = false
+  let hasVpnIssue = false
+
+  for (const log of logs) {
+    const msg = (log.message || "").toLowerCase()
+    const topics = (log.topics || "").toLowerCase()
+
+    // Deteksi power/reboot
+    if (msg.includes("router rebooted") || msg.includes("system started") || msg.includes("power") || msg.includes("ups")) {
+      hasPowerEvent = true
+      details.push(`⚡ [${log.time}] ${log.message}`)
+    }
+    
+    // Deteksi system reboot/shutdown
+    if (msg.includes("system shutdown") || msg.includes("reboot") || msg.includes("startup")) {
+      hasSystemReboot = true
+      details.push(`🔄 [${log.time}] ${log.message}`)
+    }
+
+    // Deteksi interface down
+    if ((msg.includes("link down") || msg.includes("lost carrier") || msg.includes("interface") && msg.includes("down")) && !msg.includes("link up")) {
+      hasInterfaceDown = true
+      details.push(`🔌 [${log.time}] ${log.message}`)
+    }
+
+    // Deteksi DHCP gagal
+    if (topics.includes("dhcp") && (msg.includes("no response") || msg.includes("timeout") || msg.includes("nak"))) {
+      hasDhcpIssue = true
+      details.push(`🌐 [${log.time}] ${log.message}`)
+    }
+
+    // Deteksi wireless disconnect
+    if (topics.includes("wireless") && (msg.includes("disconnected") || msg.includes("lost connection") || msg.includes("deauthenticated"))) {
+      hasWirelessDisconnect = true
+      details.push(`📡 [${log.time}] ${log.message}`)
+    }
+
+    // Deteksi PPPoE issue
+    if (topics.includes("pppoe") && (msg.includes("terminated") || msg.includes("timeout") || msg.includes("authentication failed"))) {
+      hasPppoeIssue = true
+      details.push(`📞 [${log.time}] ${log.message}`)
+    }
+
+    // Deteksi VPN/L2TP/SSTP issue
+    if ((topics.includes("l2tp") || topics.includes("sstp") || topics.includes("ovpn") || topics.includes("ipsec")) && 
+        (msg.includes("disconnected") || msg.includes("terminated") || msg.includes("timeout") || msg.includes("failed"))) {
+      hasVpnIssue = true
+      details.push(`🔒 [${log.time}] ${log.message}`)
+    }
+
+    // Deteksi login failure
+    if (msg.includes("login failure") || msg.includes("authentication failed")) {
+      hasLoginFailure = true
+    }
+  }
+
+  // Tentukan penyebab utama berdasarkan prioritas
+  if (hasPowerEvent || hasSystemReboot) {
+    cause = "⚡ Mati Lampu / Router di-Restart"
+  } else if (hasVpnIssue) {
+    cause = "🔒 Koneksi VPN Terputus"
+  } else if (hasPppoeIssue) {
+    cause = "📞 Koneksi PPPoE/ISP Terputus"
+  } else if (hasInterfaceDown) {
+    cause = "🔌 Interface/Kabel Jaringan Terputus"
+  } else if (hasWirelessDisconnect) {
+    cause = "📡 Koneksi Wireless Terputus"
+  } else if (hasDhcpIssue) {
+    cause = "🌐 DHCP Gagal Mendapatkan IP"
+  } else {
+    cause = "🌐 Koneksi Internet/VPN Sempat Terputus"
+  }
+
+  // Batasi detail maksimal 8 entri agar pesan WA tidak terlalu panjang
+  const limitedDetails = details.slice(-8)
+
+  return { cause, details: limitedDetails }
+}

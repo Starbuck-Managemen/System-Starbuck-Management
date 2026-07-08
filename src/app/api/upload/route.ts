@@ -18,15 +18,16 @@ export async function POST(request: Request) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const filename = uniqueSuffix + '-' + file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     
+    const folder = formData.get('folder') as string || 'vouchers';
     // Ensure upload directory exists
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'vouchers');
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', folder);
     await mkdir(uploadDir, { recursive: true });
     
     const filepath = path.join(uploadDir, filename);
     await writeFile(filepath, buffer);
 
     // Return the URL path
-    const fileUrl = `/uploads/vouchers/${filename}`;
+    const fileUrl = `/api/file?path=uploads/${folder}/${filename}`;
 
     return NextResponse.json({ success: true, url: fileUrl });
   } catch (error: any) {

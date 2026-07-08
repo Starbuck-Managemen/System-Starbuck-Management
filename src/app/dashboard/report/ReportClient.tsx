@@ -7,6 +7,7 @@ import { FileText, Wallet, Calendar, Ticket, Search, ChevronDown, Download, X } 
 import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import * as XLSX from 'xlsx'
+import { getSettings } from "@/app/dashboard/settings/actions"
 
 // Custom Transparent Select Component
 function CustomSelect({ 
@@ -112,6 +113,11 @@ export default function ReportClient({ summary, chartData, transactions, registe
   const currentDayStr = String(new Date().getDate()).padStart(2, '0')
 
   const router = useRouter()
+  const [settings, setSettings] = useState({ appName: "BuckNet" })
+
+  useEffect(() => {
+    getSettings().then(setSettings)
+  }, [])
 
   // Date Range Filters State
   const getLocalYYYYMMDD = (d: Date) => {
@@ -255,7 +261,7 @@ export default function ReportClient({ summary, chartData, transactions, registe
     };
     XLSX.utils.sheet_add_json(worksheet, [totalRow], { skipHeader: true, origin: -1 });
 
-    XLSX.writeFile(workbook, `Laporan_Keuangan_BuckNet_${exportStartMonth}_sampai_${exportEndMonth}.xlsx`);
+    XLSX.writeFile(workbook, `Laporan_Keuangan_${settings.appName.replace(/\s+/g, '_')}_${exportStartMonth}_sampai_${exportEndMonth}.xlsx`);
     setIsExportModalOpen(false);
   }
 

@@ -23,11 +23,20 @@ export default async function AdminOrdersPage() {
     })
   }
 
-  if (!dbUser || dbUser.role !== 'ADMIN') {
+  if (!dbUser || (dbUser.role !== 'ADMIN' && dbUser.role !== 'SUPERADMIN')) {
     redirect('/dashboard')
   }
 
+  let orderWhere: any = undefined;
+  let routerWhere: any = undefined;
+
+  if (dbUser.role === 'ADMIN') {
+    orderWhere = { router: { userId: dbUser.id } };
+    routerWhere = { userId: dbUser.id };
+  }
+
   const orders = await prisma.order.findMany({
+    where: orderWhere,
     include: {
       user: {
         select: {
@@ -41,6 +50,7 @@ export default async function AdminOrdersPage() {
 
   // Get all routers
   const routers = await prisma.router.findMany({
+    where: routerWhere,
     orderBy: { createdAt: 'desc' }
   })
 

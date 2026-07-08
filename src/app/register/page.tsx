@@ -1,16 +1,22 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, useEffect } from 'react'
 import { registerUser } from './actions'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Eye, EyeOff, Star } from 'lucide-react'
 import Link from 'next/link'
+import { getSettings } from "@/app/dashboard/settings/actions"
 
 export default function RegisterPage() {
   const [state, formAction, isPending] = useActionState(registerUser, { error: null })
   const [showPassword, setShowPassword] = useState(false)
+  const [settings, setSettings] = useState({ appName: "STARBUCK MANAGER", appLogo: "/logo.jpg" })
+
+  useEffect(() => {
+    getSettings().then(setSettings)
+  }, [])
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center p-4 bg-[#0F172A]">
@@ -19,9 +25,9 @@ export default function RegisterPage() {
           
           {/* Logo & Title */}
           <div className="flex flex-col items-center justify-center mb-8">
-            <Star className="w-10 h-10 fill-blue-500 text-blue-500 mb-4" />
+            <img src={settings.appLogo} alt="Logo" className="w-16 h-16 object-contain mb-4 rounded-xl shadow-md" />
             <h1 className="text-2xl font-bold tracking-tight">Buat Akun</h1>
-            <p className="text-xs text-slate-400 mt-2 font-light">Daftar untuk mengakses buckNet Manager</p>
+            <p className="text-xs text-slate-400 mt-2 font-light">Daftar untuk mengakses {settings.appName}</p>
           </div>
 
           {/* Form */}

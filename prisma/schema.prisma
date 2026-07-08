@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
 }
 
 model User {
@@ -25,6 +25,10 @@ model User {
   accounts            Account[]
   sessions            Session[]
   orders              Order[]
+  routers             Router[]
+  adminId             String?
+  admin               User?     @relation("AdminToUsers", fields: [adminId], references: [id])
+  managedUsers        User[]    @relation("AdminToUsers")
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 }
@@ -75,6 +79,8 @@ model Voucher {
 
 model Router {
   id                String   @id @default(cuid())
+  userId            String?  // Optional for now to not break existing data
+  user              User?    @relation(fields: [userId], references: [id])
   name              String
   host              String   // IP Address or VPN Host (e.g. id-1.mikhmon.online)
   apiPort           Int      @default(8728)
@@ -82,6 +88,7 @@ model Router {
   password          String   @default("")
   status            String   @default("Offline")
   lastOfflineAt     DateTime?
+  offlineCause      String?
   isNotifiedOffline Boolean  @default(false)
   orders            Order[]
   createdAt         DateTime @default(now())
@@ -124,4 +131,12 @@ model Order {
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
