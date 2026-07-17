@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, Suspense, Fragment } from 'react'
-import { Check, X, Clock, Upload, Type, Loader2, Save, PlusCircle, ChevronDown, ChevronRight } from 'lucide-react'
-import { processOrder, rejectOrder } from './actions'
+import { Check, X, Clock, Upload, Type, Loader2, Save, PlusCircle, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
+import { processOrder, rejectOrder, deleteOrder } from './actions'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { GenerateVoucherModal } from './GenerateVoucherModal'
@@ -157,6 +157,22 @@ export function OrdersTable({ initialOrders, routers }: { initialOrders: any[], 
       }
     } catch (e) {
       toast.error("Gagal menolak pesanan.")
+    }
+  }
+
+  const handleDeleteOrder = async (id: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus pesanan ini secara permanen?")) return;
+    
+    try {
+      const res = await deleteOrder(id)
+      if (res.success) {
+        toast.success(res.message)
+        router.refresh()
+      } else {
+        toast.error(res.error)
+      }
+    } catch (e) {
+      toast.error("Gagal menghapus pesanan.")
     }
   }
 
@@ -403,13 +419,28 @@ export function OrdersTable({ initialOrders, routers }: { initialOrders: any[], 
                               >
                                 Tolak
                               </button>
+                              <button 
+                                onClick={() => handleDeleteOrder(order.id)}
+                                className="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white px-3 py-2 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                title="Hapus Pesanan"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           )}
                         </div>
                       )}
     
                       {order.status === 'PROCESSED' && (
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-2 relative">
+                          <div className="flex justify-end mb-1">
+                            <button 
+                              onClick={() => handleDeleteOrder(order.id)}
+                              className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white px-2 py-1 rounded text-[10px] font-bold transition-colors flex items-center gap-1 w-max"
+                            >
+                              <Trash2 className="w-3 h-3" /> Hapus
+                            </button>
+                          </div>
                           {(() => {
                             const parsed = parseVoucherCode(order.voucherCode)
                             if (typeof parsed === 'object' && parsed !== null) {
@@ -439,8 +470,16 @@ export function OrdersTable({ initialOrders, routers }: { initialOrders: any[], 
                       )}
     
                       {order.status === 'REJECTED' && (
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mb-0.5">ALASAN</span>
+                        <div className="flex flex-col relative">
+                          <div className="flex justify-between items-start mb-0.5">
+                            <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">ALASAN</span>
+                            <button 
+                              onClick={() => handleDeleteOrder(order.id)}
+                              className="bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white px-2 py-1 rounded text-[10px] font-bold transition-colors flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3 h-3" /> Hapus
+                            </button>
+                          </div>
                           <span className="text-red-400 text-xs font-medium">{order.notes}</span>
                         </div>
                       )}

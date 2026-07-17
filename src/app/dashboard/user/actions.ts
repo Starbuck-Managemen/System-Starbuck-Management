@@ -77,9 +77,28 @@ export async function deleteUser(id: string) {
       }
     }
 
-    await prisma.user.delete({
-      where: { id }
-    })
+    // Cari semua sub-user (mitra) dari user ini
+    const childUsers = await prisma.user.findMany({ where: { adminId: id }, select: { id: true } })
+    const childUserIds = childUsers.map(u => u.id)
+    const allUserIds = [id, ...childUserIds]
+
+    // Hapus data terkait sebelum menghapus user untuk menghindari Foreign Key Constraint error
+    await prisma.$transaction([
+      prisma.session.deleteMany({ where: { userId: { in: allUserIds } } }),
+      prisma.account.deleteMany({ where: { userId: { in: allUserIds } } }),
+      prisma.payment.deleteMany({ where: { userId: { in: allUserIds } } }),
+      prisma.transaction.deleteMany({ where: { userId: { in: allUserIds } } }),
+      prisma.voucher.deleteMany({ where: { userId: { in: allUserIds } } }),
+      prisma.profile.deleteMany({ where: { userId: { in: allUserIds } } }),
+      prisma.router.deleteMany({ where: { userId: { in: allUserIds } } }),
+      
+      // Hapus sub-user / mitra
+      prisma.user.deleteMany({ where: { adminId: id } }),
+      
+      // Terakhir hapus usernya
+      prisma.user.delete({ where: { id } })
+    ])
+
     revalidatePath('/dashboard/user')
   } catch (error) {
     console.error("Failed to delete user:", error)

@@ -24,17 +24,27 @@ export function guessValidityFromProfile(name: string): number {
   if (!name) return 0;
   name = name.toUpperCase();
   
-  const hMatch = name.match(/(\d+)H/);
+  const hMatch = name.match(/(\d+)[-\s]*(H|JAM)/);
   if (hMatch) return parseInt(hMatch[1]) * 60 * 60 * 1000;
 
+  const dMatch = name.match(/(\d+)[-\s]*(HARI|D)/);
+  if (dMatch) return parseInt(dMatch[1]) * 24 * 60 * 60 * 1000;
+  
+  const wMatch = name.match(/(\d+)[-\s]*(MINGGU|W)/);
+  if (wMatch) return parseInt(wMatch[1]) * 7 * 24 * 60 * 60 * 1000;
+  
+  const mMatch = name.match(/(\d+)[-\s]*(BULAN)/);
+  if (mMatch) return parseInt(mMatch[1]) * 30 * 24 * 60 * 60 * 1000;
+
+  if (name.includes("MINGGU") || name.includes("1W")) return 7 * 24 * 60 * 60 * 1000;
   if (name.includes("HARI") || name.includes("1D")) return 24 * 60 * 60 * 1000;
-  if (name === "CLIENT") return 30 * 24 * 60 * 60 * 1000;
+  if (name.includes("BULAN") || name === "CLIENT") return 30 * 24 * 60 * 60 * 1000;
 
   return 0;
 }
 
 export function guessOriginalProfile(user: any, priceMap: Map<string, number>): string {
-  let limit = user["limit-uptime"] ? user["limit-uptime"].toLowerCase() : "";
+  let limit = (user.limitUptime || user["limit-uptime"] || "").toLowerCase();
 
   if (!limit || limit === "0s") {
     let lifeSpanDays = 0;
@@ -135,8 +145,17 @@ export function enrichVoucher(user: any, priceMap: Map<string, number>) {
       currentProfile = guessOriginalProfile(user, priceMap);
     }
 
-    const price = priceMap.get(currentProfile) || 0;
-    let validityMs = parseMikrotikDuration(user["limit-uptime"]) || guessValidityFromProfile(currentProfile);
+    let price = 0;
+    for (const [pName, pPrice] of priceMap.entries()) {
+      if (pName && currentProfile && pName.toLowerCase() === currentProfile.toLowerCase()) {
+         price = pPrice;
+         currentProfile = pName;
+         break;
+      }
+    }
+
+    const rawLimitUptime = user.limitUptime || user["limit-uptime"] || "";
+    let validityMs = parseMikrotikDuration(rawLimitUptime) || guessValidityFromProfile(currentProfile);
     
     // Fallback Cerdas: Jika limit-uptime kosong dan nama profil tidak dikenali (misal: "Hostpot", "default"),
     // maka kita asumsikan ini adalah voucher bulanan (30 hari). Karena voucher jam-jaman pasti memiliki limit-uptime.
@@ -169,13 +188,17 @@ export function enrichVoucher(user: any, priceMap: Map<string, number>) {
     }
 
     if (!expiresAtTimestamp && validityMs > 0) {
-      expiresAtTimestamp = createdAtTimestamp + validityMs;
+      const uptimeMs = parseMikrotikDuration(user.uptime || "0s");
+      const remainingMs = Math.max(0, validityMs - uptimeMs);
+      expiresAtTimestamp = now.getTime() + remainingMs;
     }
 
     return {
+        ...user,
         actualProfile: currentProfile,
         price,
         createdAt: new Date(createdAtTimestamp),
-        expiresAt: expiresAtTimestamp ? new Date(expiresAtTimestamp) : null
+        expiresAt: expiresAtTimestamp ? new Date(expiresAtTimestamp) : null,
+        isActive: false
     };
 }

@@ -114,26 +114,9 @@ export async function checkRouterStatus(id: string) {
     const client = await getMikrotikClient(id)
     ping = Date.now() - startTime
     
-    // Cek apakah router benar-benar punya akses internet (ping 8.8.8.8)
-    let hasInternet = true;
-    try {
-      const pingResult = await (client as any).rosApi.write('/ping', ['=address=8.8.8.8', '=count=2']);
-      if (Array.isArray(pingResult) && pingResult.length > 0) {
-        const timeouts = pingResult.filter((p: any) => p.status === 'timeout' || !p.time);
-        if (timeouts.length === pingResult.length) {
-          hasInternet = false;
-        }
-      }
-    } catch (e) {
-      console.error("Ping error:", e);
-    }
-    
     client.close()
 
-    if (!hasInternet) {
-      status = "Offline"
-      cause = "INTERNET_DOWN"
-    } else if (ping > 2000) {
+    if (ping > 2000) {
       status = "Buruk"
     } else {
       status = "Online"

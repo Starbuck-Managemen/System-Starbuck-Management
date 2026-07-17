@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Search, Trash2, Loader2, Printer, Filter, MessageCircle, Send, AlertTriangle, Phone, CalendarSync, Ban } from "lucide-react"
+import { Search, Trash2, Loader2, Printer, Filter, MessageCircle, Send, AlertTriangle, Phone, CalendarSync, Ban, Megaphone } from "lucide-react"
 import { deleteVoucherAction, changeProfileAction, updateWAAction, renewVoucherAction, disableVoucherAction } from "./actions"
+import { broadcastToVouchers } from "./broadcastActions"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -31,6 +32,29 @@ export function VoucherTable({
   const [sendingWaId, setSendingWaId] = useState<string | null>(null)
   const [renewingId, setRenewingId] = useState<string | null>(null)
   const [disablingId, setDisablingId] = useState<string | null>(null)
+  
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false)
+  const [broadcastMessage, setBroadcastMessage] = useState('')
+  const [broadcastTarget, setBroadcastTarget] = useState('ALL')
+  const [isBroadcasting, setIsBroadcasting] = useState(false)
+
+  const handleBroadcast = async () => {
+    if (!routerId) return;
+    if (!broadcastMessage.trim()) return toast.error('Pesan pengumuman tidak boleh kosong')
+    if (!confirm(broadcastTarget === 'ALL' ? 'Yakin ingin mengirim pengumuman ini ke seluruh pengguna voucher aktif?' : 'Yakin ingin mengirim pengumuman ke voucher ini?')) return
+
+    setIsBroadcasting(true)
+    const toastId = toast.loading('Mengirim pengumuman voucher...')
+    const res = await broadcastToVouchers(broadcastMessage, routerId, broadcastTarget === 'ALL' ? undefined : broadcastTarget)
+    if (res.success) {
+      toast.success(res.message, { id: toastId })
+      setIsBroadcastModalOpen(false)
+      setBroadcastMessage('')
+    } else {
+      toast.error(res.error || 'Gagal mengirim pengumuman', { id: toastId })
+    }
+    setIsBroadcasting(false)
+  }
 
   // Fungsi pembantu untuk mengurai format waktu MikroTik (misal: 1d2h3m) menjadi detik
   const parseMikrotikTime = (timeStr: string) => {
@@ -50,17 +74,26 @@ export function VoucherTable({
 
   const getVoucherStatus = (v: any) => {
     if (v.disabled) return "NONAKTIF"
+    if (v.uptime === "0s" && !v.isActive) return "BELUM DIPAKAI"
     
     let isExpiringSoon = false
     const now = new Date().getTime()
     
     if (v.expiresAt) {
       const expiresTime = new Date(v.expiresAt).getTime()
-      // Jika sisa waktu kurang dari 2 hari (48 jam)
-      if (expiresTime > now && expiresTime - now <= 48 * 60 * 60 * 1000) {
-        isExpiringSoon = true
-      }
-      if (expiresTime <= now) {
+      const createdTime = v.createdAt ? new Date(v.createdAt).getTime() : 0
+      const totalLifespan = expiresTime - createdTime
+      const timeRemaining = expiresTime - now
+      
+      if (timeRemaining > 0) {
+        // Jika voucher bulanan (lebih dari 7 hari), peringatan 2 hari sebelum habis.
+        // Jika voucher harian/jaman, peringatan di 20% sisa waktu terakhir.
+        if (totalLifespan > 7 * 24 * 60 * 60 * 1000) {
+          if (timeRemaining <= 48 * 60 * 60 * 1000) isExpiringSoon = true
+        } else if (totalLifespan > 0) {
+          if (timeRemaining <= totalLifespan * 0.2) isExpiringSoon = true
+        }
+      } else {
          return "KADALUARSA" // Status baru
       }
     } else if (v.limitUptime) {
@@ -72,7 +105,6 @@ export function VoucherTable({
 
     if (isExpiringSoon) return "HAMPIR HABIS"
     if (v.isActive) return "ACTIVE"
-    if (v.uptime === "0s") return "BELUM DIPAKAI"
     return "OFFLINE"
   }
 
@@ -220,7 +252,7 @@ export function VoucherTable({
     })
   }
 
-  const handleSendVoucherWA = (voucherId: string, voucherName: string, waNumber: string, comment: string, profile: string) => {
+  const handleSendVoucherWA = (voucherId: string, voucherName: string, waNumber: string, comment: string, profile: string, price: number) => {
     if (!routerId) return
     
     if (!confirm(`Kirim pesan WA berisi detail voucher ke ${voucherName} (${waNumber}) sekarang via Bot?`)) return
@@ -240,15 +272,6 @@ export function VoucherTable({
         const hour = new Date().getHours();
         const greeting = hour < 4 ? "Selamat Malam" : hour < 11 ? "Selamat Pagi" : hour < 15 ? "Selamat Siang" : hour < 18 ? "Selamat Sore" : "Selamat Malam";
         
-        const profilePrices: Record<string, number> = {
-          "1-JAM": 10000,
-          "6-Jam": 30000,
-          "1-hari": 45000,
-          "3-Hari": 75000,
-          "15-Hari": 100000,
-          "1-BULAN": 150000,
-        };
-        const price = profile && profilePrices[profile] ? profilePrices[profile] : 0;
         const priceFormatted = price > 0 ? `Rp ${new Intl.NumberFormat("id-ID").format(price)}` : "-";
 
         const message = `${greeting} kak *${displayName}*! 👋\n\nIni pesan otomatis dari Admin WiFi STARBUCK. Pendaftaran langganan internet kakak sudah berhasil kami proses ya.\n\nBerikut adalah detail akses WiFi kakak:\n🎟️ Kode Voucher: *${voucherName}*\n📦 Paket: *${profile}*\n💵 Harga: *${priceFormatted}*\n\nSelamat menikmati koneksi internet kami! Jika ada kendala, jangan sungkan untuk menghubungi kami. Terima kasih! 🙏`;
@@ -331,15 +354,24 @@ export function VoucherTable({
             />
           </div>
           
-          {routerId && vouchers.length > 0 && (
-            <Link 
-              href={`/dashboard/voucher/print?routerId=${routerId}`}
-              target="_blank"
-              className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap text-sm"
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => setIsBroadcastModalOpen(true)}
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto justify-center"
             >
-              <Printer className="w-4 h-4" /> Cetak Semua
-            </Link>
-          )}
+              <Megaphone className="w-4 h-4" /> Pengumuman
+            </button>
+
+            {routerId && vouchers.length > 0 && (
+              <Link 
+                href={`/dashboard/voucher/print?routerId=${routerId}`}
+                target="_blank"
+                className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap text-sm"
+              >
+                <Printer className="w-4 h-4" /> Cetak Semua
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Filters (Profiles & Status) */}
@@ -380,19 +412,73 @@ export function VoucherTable({
         </div>
       </div>
 
+      {/* Broadcast Modal */}
+      {isBroadcastModalOpen && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl relative">
+            <h2 className="text-xl font-bold text-slate-100 mb-2">Kirim Pengumuman Voucher</h2>
+            <p className="text-slate-400 text-sm mb-4">Pesan akan dikirimkan ke target yang Anda pilih. Pengiriman massal otomatis diberi jeda (Anti-Spam).</p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-400 mb-1">Target Penerima</label>
+              <select
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:outline-none focus:border-purple-500"
+                value={broadcastTarget}
+                onChange={e => setBroadcastTarget(e.target.value)}
+                disabled={isBroadcasting}
+              >
+                <option value="ALL">📢 Semua Pengguna Voucher (Kirim Serentak)</option>
+                {vouchers.filter(v => v.comment && v.comment.includes("WA:")).map(v => (
+                  <option key={v.id} value={v.id}>{v.name} - {v.profile}</option>
+                ))}
+              </select>
+            </div>
+
+            <textarea
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 min-h-[150px] mb-4"
+              placeholder="Ketik isi pengumuman Anda di sini..."
+              value={broadcastMessage}
+              onChange={e => setBroadcastMessage(e.target.value)}
+              disabled={isBroadcasting}
+            />
+
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => setIsBroadcastModalOpen(false)}
+                disabled={isBroadcasting}
+                className="px-5 py-2.5 rounded-xl font-medium text-slate-300 hover:bg-slate-800 transition-colors disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleBroadcast}
+                disabled={isBroadcasting}
+                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-6 py-2.5 rounded-xl font-medium transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50"
+              >
+                {isBroadcasting ? (
+                  <>Mengirim...</>
+                ) : (
+                  <><Megaphone className="w-4 h-4" /> Mulai Kirim</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-slate-400 whitespace-nowrap [&_th]:whitespace-nowrap [&_td]:whitespace-nowrap">
           <thead className="bg-[#0F172A] text-xs uppercase text-slate-300 font-semibold border-b border-slate-800">
             <tr>
-              <th scope="col" className="px-6 py-4 w-[60px] text-center">No.</th>
-              <th scope="col" className="px-6 py-4">Kode/Username</th>
-              <th scope="col" className="px-6 py-4">Profil</th>
-              <th scope="col" className="px-6 py-4">Harga</th>
-              <th scope="col" className="px-6 py-4">Tanggal Active</th>
-              <th scope="col" className="px-6 py-4">Tanggal Selesai</th>
-              <th scope="col" className="px-6 py-4 text-center">Status</th>
+              <th scope="col" className="hidden md:table-cell px-4 py-4 w-[40px] text-center">No.</th>
+              <th scope="col" className="px-4 py-4">Kode/Username</th>
+              <th scope="col" className="hidden sm:table-cell px-4 py-4">Profil</th>
+              <th scope="col" className="hidden md:table-cell px-4 py-4">Harga</th>
+              <th scope="col" className="hidden lg:table-cell px-4 py-4">Tgl Aktif</th>
+              <th scope="col" className="px-4 py-4">Batas Waktu</th>
+              <th scope="col" className="px-4 py-4 text-center">Status</th>
               {role === 'ADMIN' && (
-                <th scope="col" className="px-6 py-4 text-right">Aksi</th>
+                <th scope="col" className="px-4 py-4 text-right">Aksi</th>
               )}
             </tr>
           </thead>
@@ -412,19 +498,7 @@ export function VoucherTable({
             ) : (
               filteredVouchers.map((v, index) => {
                 // Kalkulasi Harga dari Profil berdasarkan daftar harga spesifik
-                let price = 0;
-                const profilePrices: Record<string, number> = {
-                  "1-JAM": 10000,
-                  "6-Jam": 30000,
-                  "1-hari": 45000,
-                  "3-Hari": 75000,
-                  "15-Hari": 100000,
-                  "1-BULAN": 150000,
-                };
-                
-                if (v.profile && profilePrices[v.profile]) {
-                  price = profilePrices[v.profile];
-                }
+                let price = v.price || 0;
 
                 const priceFormatted = price > 0 ? `Rp ${new Intl.NumberFormat("id-ID").format(price)}` : "-"
 
@@ -449,25 +523,25 @@ export function VoucherTable({
                       status === "HAMPIR HABIS" ? "bg-orange-950/20 hover:bg-orange-950/30" : "hover:bg-slate-800/50"
                     }`}
                   >
-                  <td className="px-6 py-4 text-slate-500 font-medium text-center">
+                  <td className="hidden md:table-cell px-4 py-4 text-slate-500 font-medium text-center">
                     {index + 1}
                   </td>
-                  <td className="px-6 py-4 font-medium text-slate-200">
+                  <td className="px-4 py-4 font-medium text-slate-200">
                     <div className="flex flex-col">
                       <span>{v.name}</span>
                       {v.password && v.password !== v.name && <span className="text-xs text-slate-500 font-mono">Pwd: {v.password}</span>}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="hidden sm:table-cell px-4 py-4">
                     {v.actualProfile || v.profile}
                   </td>
-                  <td className="px-6 py-4 text-slate-300 font-medium text-xs">
+                  <td className="hidden md:table-cell px-4 py-4 text-slate-300 font-medium text-xs">
                     {priceFormatted}
                   </td>
-                  <td className="px-6 py-4 font-mono text-xs text-slate-300">
+                  <td className="hidden lg:table-cell px-4 py-4 font-mono text-xs text-slate-300">
                     {v.uptime === "0s" ? "-" : formatIndoDate(v.createdAt)}
                   </td>
-                  <td className="px-6 py-4 font-mono text-xs">
+                  <td className="px-4 py-4 font-mono text-xs">
                     <div className="flex flex-col">
                       <span className="text-slate-300">{v.uptime === "0s" ? "-" : formatIndoDate(v.expiresAt)}</span>
                       {(() => {
@@ -490,7 +564,7 @@ export function VoucherTable({
                       })()}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-4 py-4 text-center">
                     <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full ${
                       status === "NONAKTIF" ? "bg-red-500/10 text-red-500 border border-red-500/20" :
                       status === "KADALUARSA" ? "bg-red-900/30 text-red-500 border border-red-900/50" :
@@ -503,11 +577,11 @@ export function VoucherTable({
                     </span>
                   </td>
                   {role === 'ADMIN' && (
-                    <td className="px-6 py-4 text-right space-x-2">
+                    <td className="px-4 py-4 text-right space-x-2">
                       {/* Action: Kirim WA Voucher Detail */}
                       {isMonthly && waNumber && (
                         <button 
-                          onClick={() => handleSendVoucherWA(v.id, v.name, waNumber, v.comment || "", v.profile || "")}
+                          onClick={() => handleSendVoucherWA(v.id, v.name, waNumber, v.comment || "", v.profile || "", price)}
                           disabled={isPending && sendingWaId === v.id}
                           className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors disabled:opacity-50"
                           title="Kirim Detail Voucher"

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <title id="title">ALJUANDRI.NET WiFi > Logout</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="theme-color" content="#0F172A" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: #0F172A;
+            background-image: radial-gradient(circle at 50% -20%, #1e293b, #0f172a);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .glass-container {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.5s ease-out;
+            text-align: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo-container {
+            margin-bottom: 24px;
+        }
+
+        .logo-text {
+            font-size: 32px;
+            font-weight: 800;
+            color: #38bdf8;
+            letter-spacing: -1px;
+            text-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+        }
+        
+        .logo-text span {
+            color: #f8fafc;
+        }
+
+        .status-icon {
+            width: 64px;
+            height: 64px;
+            background: rgba(244, 63, 94, 0.1);
+            color: #f43f5e;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 32px;
+            border: 1px solid rgba(244, 63, 94, 0.2);
+        }
+
+        .message-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 8px;
+        }
+
+        .message-subtitle {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 28px;
+        }
+
+        .stats-box {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-item:last-child {
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 14px;
+            color: #f8fafc;
+            font-weight: 700;
+        }
+
+        .stat-value.highlight {
+            color: #38bdf8;
+        }
+
+        .stat-value.warning {
+            color: #f59e0b;
+        }
+
+        .btn-login {
+            display: block;
+            width: 100%;
+            background: linear-gradient(135deg, #38bdf8, #0284c7);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+            text-decoration: none;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(2, 132, 199, 0.5);
+        }
+
+        .footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .footer a {
+            color: #38bdf8;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+    <script language="JavaScript">
+        function openLogin() {
+            if (window.name != 'hotspot_logout') return true;
+            open('$(link-login)', '_blank', '');
+            window.close();
+            return false;
+        }
+    </script>
+
+    <div class="glass-container">
+        <div class="logo-container">
+            <div class="logo-text">ALJUANDRI<span>.NET</span></div>
+        </div>
+
+        <div class="status-icon">
+            ✓
+        </div>
+
+        <div class="message-title">Anda Telah Logout</div>
+        <div class="message-subtitle">Sesi internet Anda telah berakhir dengan aman.</div>
+
+        <div class="stats-box">
+            <div class="stat-item">
+                <span class="stat-label">Pengguna</span>
+                <span class="stat-value">$(username)</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">IP Address</span>
+                <span class="stat-value">$(ip)</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">MAC Address</span>
+                <span class="stat-value">$(mac)</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Total Waktu Online</span>
+                <span class="stat-value highlight">$(uptime)</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Download</span>
+                <span class="stat-value">$(bytes-out-nice)</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Upload</span>
+                <span class="stat-value">$(bytes-in-nice)</span>
+            </div>
+            $(if remain-bytes-total)
+            <div class="stat-item">
+                <span class="stat-label">Sisa Kuota</span>
+                <span class="stat-value warning">$(remain-bytes-total-nice)</span>
+            </div>
+            $(endif)
+            $(if session-time-left)
+            <div class="stat-item">
+                <span class="stat-label">Sisa Waktu</span>
+                <span class="stat-value warning">$(session-time-left)</span>
+            </div>
+            $(endif)
+        </div>
+
+        <form action="$(link-login)" name="login" onSubmit="return openLogin()">
+            <button class="btn-login" type="submit">Masuk Kembali (Login)</button>
+        </form>
+    </div>
+
+    <div class="footer">
+        &copy; 2026 Aljuandri - Powered by <a href="#">Bucknet Manager</a>
+    </div>
+
+    <script type="text/javascript">
+        document.getElementById('title').innerHTML = window.location.hostname + " > Logout";
+    </script>
+</body>
+</html>

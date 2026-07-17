@@ -5,7 +5,14 @@ const { auth } = NextAuth(authConfig)
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth
-  const isAuthPage = req.nextUrl.pathname.startsWith('/login') || req.nextUrl.pathname.startsWith('/register')
+  const path = req.nextUrl.pathname
+  
+  // Rute publik (Pelanggan beli voucher)
+  if (path.startsWith('/buy')) {
+    return null
+  }
+
+  const isAuthPage = path.startsWith('/login') || path.startsWith('/register')
   
   if (isAuthPage) {
     if (isLoggedIn) {
@@ -23,8 +30,7 @@ export default auth((req) => {
     console.log('MIDDLEWARE req.auth:', JSON.stringify(req.auth, null, 2))
   }
   const role = (req.auth as any)?.user?.role || (req.auth as any)?.role || 'USER'
-  const path = req.nextUrl.pathname
-  
+
   if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
     const forbiddenPaths = [
       '/dashboard/user',

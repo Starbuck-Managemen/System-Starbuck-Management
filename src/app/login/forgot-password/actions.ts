@@ -1,28 +1,17 @@
 'use server'
 
 import prisma from '@/lib/prisma'
+import crypto from 'crypto'
+
+import { getSettings } from "@/app/dashboard/settings/actions"
 
 /**
- * Generate random password yang mudah dibaca
- * Menghasilkan 8 karakter kombinasi huruf + angka
- */
-function generatePassword(length: number = 8): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
-  let result = ""
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return result
-}
-
-/**
- * Reset password:
+ * Reset password (Token-Based):
  * 1. Verifikasi username + nomor WA
- * 2. Jika user belum punya nomor WA → simpan otomatis
- * 3. Generate password baru
- * 4. Update password di database
- * 5. Kirim password baru via WA ke user
- * 6. Kirim notifikasi ke admin via WA
+ * 2. Generate secure token
+ * 3. Simpan token ke database (berlaku 15 menit)
+ * 4. Kirim link reset via WA
+ * 5. Jika Bot WA mati, kembalikan error (menutup celah keamanan)
  */
 export async function resetPasswordWithWA(
   prevState: { status: string; message?: string; newPassword?: string } | undefined,
@@ -67,11 +56,12 @@ export async function resetPasswordWithWA(
       }
     }
 
-    // Generate password baru
-    const newPassword = generatePassword(8)
+    // Generate secure token (32 bytes hex)
+    const resetToken = crypto.randomBytes(32).toString('hex')
+    const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000) // 15 menit dari sekarang
 
-    // Update password + simpan nomor WA jika belum ada
-    const updateData: any = { password: newPassword }
+    // Simpan token ke DB + update nomor WA jika belum ada
+    const updateData: any = { resetToken, resetTokenExpiry }
     const isNewPhone = !user.phone
     
     if (isNewPhone) {
@@ -83,24 +73,33 @@ export async function resetPasswordWithWA(
       data: updateData
     })
 
-    // Kirim password baru ke WA user
+    // Kirim link reset ke WA user
     let waSent = false
     try {
-      const { getSettings } = require("@/app/dashboard/settings/actions")
       const settings = await getSettings()
-      const message = `🔑 *Reset Password Berhasil*\n\nHalo *${user.name || username}*!\n\nPassword akun ${settings.appName} Anda telah di-reset.\n\n👤 Username: *${username}*\n🔐 Password Baru: *${newPassword}*\n\n⚠️ _Segera ganti password ini setelah login untuk keamanan akun Anda._`
+      
+      const resetLink = `https://starbuck.web.id/login/reset-password/${resetToken}`
+      const message = `🔑 *Permintaan Reset Password*\n\nHalo *${user.name || username}*!\n\nKami menerima permintaan untuk mereset password akun ${settings.appName} Anda.\n\nKlik tautan aman di bawah ini untuk membuat password baru:\n${resetLink}\n\n⚠️ _Tautan ini hanya berlaku selama 15 menit dan hanya bisa digunakan satu kali. Jika Anda tidak merasa memintanya, abaikan pesan ini._`
 
       const response = await fetch('http://127.0.0.1:3001/send-wa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ number: normalizedPhone, message })
+        body: JSON.stringify({ clientId: user.id, number: normalizedPhone, message })
       })
 
       if (response.ok) {
         waSent = true
       }
-    } catch {
-      console.log('[FORGOT-PASSWORD] Bot WA offline, password baru tidak dikirim via WA.')
+    } catch (e) {
+      console.log('[FORGOT-PASSWORD] Bot WA offline, link reset gagal dikirim. Error:', e)
+    }
+
+    // Jika WA gagal, tolak permintaan untuk mencegah celah keamanan layar
+    if (!waSent) {
+      return { 
+        status: 'error', 
+        message: 'Bot WhatsApp sedang offline sehingga tidak dapat mengirim Link Reset. Silakan pastikan Bot aktif atau hubungi Super Admin.'
+      }
     }
 
     // Kirim notifikasi ke Admin (fire-and-forget)
@@ -108,31 +107,21 @@ export async function resetPasswordWithWA(
       const adminPhone = process.env.ADMIN_PHONE
       if (adminPhone) {
         const now = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
-        const adminMessage = `🔐 *[RESET PASSWORD]*\n\nUser *${username}* (${user.name || '-'}) melakukan reset password.\n\n📅 Waktu: ${now}\n📱 Nomor WA: ${normalizedPhone}${isNewPhone ? ' _(baru disimpan)_' : ''}\n📨 WA Terkirim: ${waSent ? 'Ya ✅' : 'Tidak ❌ (Bot offline)'}`
+        const adminMessage = `🔐 *[RESET PASSWORD]*\n\nUser *${username}* (${user.name || '-'}) meminta link reset password.\n\n📅 Waktu: ${now}\n📱 Nomor WA: ${normalizedPhone}${isNewPhone ? ' _(baru disimpan)_' : ''}`
         
         await fetch('http://127.0.0.1:3001/send-wa', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ number: adminPhone, message: adminMessage })
+          body: JSON.stringify({ clientId: user.id, number: adminPhone, message: adminMessage })
         })
       }
     } catch {
       // Abaikan jika Bot WA offline
     }
 
-    // Jika WA terkirim, tampilkan pesan sukses tanpa tunjukkan password
-    // Jika WA gagal, tunjukkan password di layar sebagai fallback
-    if (waSent) {
-      return { 
-        status: 'success_wa', 
-        message: `Password baru telah dikirim ke WhatsApp (${normalizedPhone.slice(0, 4)}****${normalizedPhone.slice(-3)}).` 
-      }
-    } else {
-      return { 
-        status: 'success_no_wa', 
-        message: 'Bot WhatsApp sedang tidak aktif. Catat password baru Anda di bawah ini.',
-        newPassword 
-      }
+    return { 
+      status: 'success_wa', 
+      message: `Tautan rahasia untuk mengubah password telah dikirim ke WhatsApp (${normalizedPhone.slice(0, 4)}****${normalizedPhone.slice(-3)}). Berlaku 15 menit.` 
     }
 
   } catch (error) {

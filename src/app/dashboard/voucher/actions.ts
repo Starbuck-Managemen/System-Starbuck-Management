@@ -50,9 +50,51 @@ export async function disableVoucherAction(routerId: string, voucherName: string
   }
 }
 
+import prisma from "@/lib/prisma"
+import { enrichVoucher } from "@/lib/mikrotikUtils"
+import { getVouchers } from "@/lib/mikrotik"
+
 export async function deleteVoucherAction(routerId: string, voucherName: string) {
   if (!routerId || !voucherName) {
     return { error: "ID Router atau Nama Voucher tidak valid." }
+  }
+
+  // 1. Ambil data voucher untuk menyimpan jejak pendapatannya
+  try {
+    const router = await prisma.router.findUnique({ where: { id: routerId } })
+    if (router) {
+      const vouchers = await getVouchers(routerId)
+      const targetVoucher = vouchers.find((v: any) => v.name === voucherName)
+      
+      if (targetVoucher) {
+        const dbProfiles = await prisma.profile.findMany({ where: { routerId } })
+        const priceMap = new Map<string, number>()
+        dbProfiles.forEach(p => priceMap.set(p.name, p.price))
+        
+        const enriched = enrichVoucher(targetVoucher, priceMap)
+        
+        const existingTx = await prisma.transaction.findFirst({
+          where: { username: voucherName, createdAt: enriched.createdAt }
+        })
+        
+        if (!existingTx) {
+          await prisma.transaction.create({
+            data: {
+              userId: router.userId,
+              amount: enriched.price,
+              type: "Income",
+              username: voucherName,
+              voucherType: enriched.actualProfile,
+              activeAt: enriched.createdAt,
+              expiresAt: enriched.expiresAt,
+              createdAt: enriched.createdAt,
+            }
+          })
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Gagal menyimpan backup transaksi:", e)
   }
 
   const result = await deleteVoucher(routerId, voucherName)

@@ -6,31 +6,45 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  username      String?   @unique
-  email         String?   @unique
-  emailVerified DateTime?
-  password      String?
-  phone         String?   @unique
-  image         String?
-  role                String    @default("USER")
+  id                  String    @id @default(cuid())
+  name                String?
+  username            String?   @unique
+  email               String?   @unique
+  emailVerified       DateTime?
+  password            String?
+  phone               String?   @unique
+  image               String?
+  role                String    @default("USER") // USER, ADMIN, SUPER_ADMIN
   status              String    @default("Active")
   currentSessionToken String?
   lastActive          DateTime?
-  accounts            Account[]
-  sessions            Session[]
-  orders              Order[]
-  routers             Router[]
-  adminId             String?
-  admin               User?     @relation("AdminToUsers", fields: [adminId], references: [id])
-  managedUsers        User[]    @relation("AdminToUsers")
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  resetToken          String?   @unique
+  resetTokenExpiry    DateTime?
+
+  // Subscription / Billing fields
+  subscriptionStatus String            @default("Trial") // Trial, Active, Expired, Banned
+  trialEndsAt        DateTime?
+  subscriptionEndsAt DateTime?
+  subscriptionPlanId String?
+  subscriptionPlan   SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id])
+
+  accounts     Account[]
+  sessions     Session[]
+  orders       Order[]
+  routers      Router[]
+  vouchers     Voucher[]
+  profiles     Profile[]
+  transactions Transaction[]
+  payments     Payment[]
+  adminId      String?
+  admin        User?         @relation("AdminToUsers", fields: [adminId], references: [id])
+  managedUsers User[]        @relation("AdminToUsers")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model Account {
@@ -70,6 +84,8 @@ model VerificationToken {
 
 model Voucher {
   id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
   code      String   @unique
   price     Float    @default(0)
   status    String   @default("Active")
@@ -78,40 +94,46 @@ model Voucher {
 }
 
 model Router {
-  id                String   @id @default(cuid())
-  userId            String?  // Optional for now to not break existing data
-  user              User?    @relation(fields: [userId], references: [id])
+  id                String         @id @default(cuid())
+  userId            String
+  user              User           @relation(fields: [userId], references: [id])
   name              String
-  host              String   // IP Address or VPN Host (e.g. id-1.mikhmon.online)
-  apiPort           Int      @default(8728)
-  username          String   @default("admin")
-  password          String   @default("")
-  status            String   @default("Offline")
+  host              String // IP Address or VPN Host (e.g. id-1.mikhmon.online)
+  apiPort           Int            @default(8728)
+  username          String         @default("admin")
+  password          String         @default("")
+  status            String         @default("Offline")
   lastOfflineAt     DateTime?
   offlineCause      String?
-  isNotifiedOffline Boolean  @default(false)
+  isNotifiedOffline Boolean        @default(false)
   orders            Order[]
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  hotspotOrders     HotspotOrder[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 }
 
 model Profile {
-  id        String   @id @default(cuid())
-  routerId  String
-  name      String   // Nama profile di MikroTik (e.g. 1-BULAN)
-  price     Float    @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String         @id @default(cuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id])
+  routerId      String
+  name          String // Nama profile di MikroTik (e.g. 1-BULAN)
+  price         Float          @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  hotspotOrders HotspotOrder[]
 
   @@unique([routerId, name]) // Satu router hanya bisa punya satu harga untuk nama profil tertentu
 }
 
 model Transaction {
   id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
   amount      Float     @default(0)
   type        String    @default("Income")
-  username    String?   // ID or Username of the voucher
-  voucherType String?   // Profile (e.g. 1 Jam, Bulanan)
+  username    String? // ID or Username of the voucher
+  voucherType String? // Profile (e.g. 1 Jam, Bulanan)
   activeAt    DateTime?
   expiresAt   DateTime?
   createdAt   DateTime  @default(now())
@@ -123,10 +145,10 @@ model Order {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   routerId    String
   router      Router   @relation(fields: [routerId], references: [id], onDelete: Cascade)
-  packageName String   // e.g., "1 Jam", "1 Bulan"
+  packageName String // e.g., "1 Jam", "1 Bulan"
   price       Float    @default(0)
   status      String   @default("PENDING") // PENDING, PROCESSED, REJECTED
-  voucherCode String?  // Code provided by admin when PROCESSED
+  voucherCode String? // Code provided by admin when PROCESSED
   isRead      Boolean  @default(false)
   notes       String?
   createdAt   DateTime @default(now())
@@ -139,4 +161,132 @@ model Setting {
   value     String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model SubscriptionPlan {
+  id           String    @id @default(cuid())
+  name         String // e.g., "Free Trial", "Basic", "Pro"
+  price        Float     @default(0)
+  durationDays Int       @default(30)
+  maxRouters   Int       @default(1)
+  maxVouchers  Int       @default(100)
+  features     String?   @db.Text // JSON string of features
+  users        User[]
+  payments     Payment[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Payment {
+  id                 String           @id @default(cuid())
+  userId             String
+  user               User             @relation(fields: [userId], references: [id])
+  subscriptionPlanId String
+  subscriptionPlan   SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
+  amount             Float            @default(0)
+  status             String           @default("PENDING") // PENDING, PAID, FAILED
+  paymentMethod      String? // e.g., "MANUAL_TRANSFER", "MIDTRANS"
+  proofUrl           String? // URL to uploaded proof of transfer
+  externalId         String? // Midtrans/Xendit transaction ID
+  paidAt             DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+model HotspotOrder {
+  id            String   @id @default(cuid())
+  routerId      String
+  router        Router   @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  profileId     String
+  profile       Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  customerName  String?
+  customerPhone String?
+  amount        Float
+  status        String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  voucherCode   String?
+  paymentUrl    String?
+  paymentToken  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ==========================================
+// RENTAL HOUSE MANAGEMENT (SUPER ADMIN ONLY)
+// ==========================================
+
+model RentalHouse {
+  id          String   @id @default(cuid())
+  name        String   // Nama Kamar/Rumah (e.g., "Kamar 1")
+  tenantName  String?  // Nama Penyewa saat ini
+  tenantPhone String?  // No HP WhatsApp penyewa
+  price       Float    @default(0) // Harga Sewa per bulan
+  dueDate     Int      @default(1) // Tanggal jatuh tempo (1-31)
+  status      String   @default("OCCUPIED") // OCCUPIED, VACANT, MAINTENANCE
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  invoices    RentalInvoice[]
+  payments    RentalPayment[]
+}
+
+model RentalInvoice {
+  id          String   @id @default(cuid())
+  houseId     String
+  house       RentalHouse @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  
+  month       Int      // 1-12
+  year        Int      // 2026, dll
+  amountDue   Float    // Total tagihan bulan tersebut
+  amountPaid  Float    @default(0) // Total yang sudah dibayar khusus untuk invoice ini
+  status      String   @default("UNPAID") // UNPAID, PARTIAL, PAID
+  
+  dueDate     DateTime // Tanggal persis jatuh tempo (e.g. 2026-07-05)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([houseId, month, year]) // Satu kamar hanya boleh punya 1 invoice per bulan
+}
+
+model RentalPayment {
+  id            String   @id @default(cuid())
+  houseId       String
+  house         RentalHouse @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  
+  amount        Float    // Nominal uang yang masuk
+  paymentMethod String   @default("MIDTRANS") // MIDTRANS, CASH, TRANSFER_MANUAL
+  status        String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  paymentUrl    String?
+  paymentToken  String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// Label/nama untuk setiap tunnel VPS agar mudah dikenali
+model TunnelLabel {
+  id          String   @id @default(cuid())
+  port        String   @unique // Port publik VPS, misal "8110", "8130"
+  label       String   // Nama perangkat, misal "EAP 220 Kantor"
+  description String?  // Keterangan tambahan (opsional)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ==========================================
+// MIKROTIK VPN MANAGER (SUPER ADMIN ONLY)
+// ==========================================
+
+// Menyimpan konfigurasi VPN L2TP untuk setiap MikroTik yang terdaftar
+model MikrotikVPN {
+  id          String   @id @default(cuid())
+  name        String   // Nama router, e.g. "Starbuck", "Aljuandri"
+  vpnUser     String   @unique // Username VPN L2TP, e.g. "starbuck"
+  vpnPassword String   // Password VPN L2TP
+  vpnIp       String   @unique // IP statis VPN, e.g. "192.168.43.11"
+  winboxPort  Int      @unique // Port publik VPS untuk Winbox, e.g. 8292
+  extraPorts  String?  // JSON array port tambahan, e.g. [{"public":8110,"internal":8110}]
+  ipsecPsk    String   @default("AljuandriPSK2026") // IPSec Pre-Shared Key
+  notes       String?  // Catatan tambahan opsional
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

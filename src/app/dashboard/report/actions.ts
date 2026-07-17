@@ -33,6 +33,59 @@ export async function getLiveReportSummary(routerId: string, startDate?: string,
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
 
+    // 3a. Ambil transaksi yang sudah direcord di database (voucher yang dihapus)
+    const router = await prisma.router.findUnique({ where: { id: routerId } })
+    if (router) {
+      const dbTransactions = await prisma.transaction.findMany({
+        where: { 
+          userId: router.userId,
+          NOT: {
+            voucherType: {
+              startsWith: 'SaaS'
+            }
+          }
+        }
+      })
+
+      for (const tx of dbTransactions) {
+        const createdAtTimestamp = tx.createdAt.getTime()
+
+        // Periksa apakah masuk dalam rentang filter
+        if (startDate || endDate) {
+          let isIncluded = true
+          if (startDate) {
+            const start = new Date(startDate).getTime()
+            if (createdAtTimestamp < start) isIncluded = false
+          }
+          if (endDate) {
+            const end = new Date(endDate)
+            end.setHours(23, 59, 59, 999)
+            if (createdAtTimestamp > end.getTime()) isIncluded = false
+          }
+          if (!isIncluded) continue
+        }
+
+        if (createdAtTimestamp >= startOfToday) todayIncome += tx.amount
+        if (createdAtTimestamp >= startOfMonth) {
+          monthIncome += tx.amount
+          vouchersCreatedThisMonth++
+        }
+
+        transactions.push({
+          id: tx.id,
+          amount: tx.amount,
+          type: tx.type,
+          username: tx.username,
+          voucherType: tx.voucherType,
+          comment: "RECORDED",
+          createdAt: tx.createdAt,
+          activeAt: tx.activeAt,
+          expiresAt: tx.expiresAt,
+        })
+      }
+    }
+
+    // 3b. Ambil transaksi dari MikroTik (voucher yang masih hidup)
     for (const user of mkUsers) {
       // Filter: Hanya tampilkan voucher yang sudah pernah digunakan/login (uptime != 0s)
       const isUsed = user.uptime && user.uptime !== "0s";
@@ -40,6 +93,11 @@ export async function getLiveReportSummary(routerId: string, startDate?: string,
 
       const enriched = enrichVoucher(user, priceMap);
       
+      // Jangan tambahkan jika sudah ada di database transaction untuk mencegah duplikat
+      if (transactions.some(t => t.username === user.name && t.createdAt.getTime() === enriched.createdAt.getTime())) {
+        continue;
+      }
+
       const createdAtTimestamp = enriched.createdAt.getTime();
 
       // Periksa apakah masuk dalam rentang filter

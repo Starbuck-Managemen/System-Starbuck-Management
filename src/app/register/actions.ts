@@ -60,7 +60,11 @@ export async function registerUser(prevState: any, formData: FormData) {
         phone: cleanedPhone,
         password,
         role,
-        status: 'Active'
+        status: 'Active',
+        ...(role === 'ADMIN' ? {
+          subscriptionStatus: 'Trial',
+          trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
+        } : {})
       }
     })
     

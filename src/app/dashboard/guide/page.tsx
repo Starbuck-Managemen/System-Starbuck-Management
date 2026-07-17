@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Info, Wifi, Ticket, Tag, Activity, Settings, HelpCircle, FileText, Users, ChevronDown } from "lucide-react";
+import { BookOpen, Info, Wifi, Ticket, Tag, Activity, Settings, HelpCircle, FileText, Users, ChevronDown, MessageSquare, Shield, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getSettings } from "@/app/dashboard/settings/actions";
 
@@ -13,8 +13,11 @@ export default function GuidePage() {
     { id: 'pengantar', label: 'Pengantar', icon: <Info className="w-5 h-5" /> },
     { id: 'router', label: 'Menghubungkan Router MikroTik', icon: <Wifi className="w-5 h-5" /> },
     { id: 'profil', label: 'Manajemen Profil & Harga', icon: <Tag className="w-5 h-5" /> },
+    { id: 'klien', label: 'Manajemen Klien & Sistem Mitra', icon: <Users className="w-5 h-5" /> },
     { id: 'voucher', label: 'Cara Generate & Print Voucher', icon: <Ticket className="w-5 h-5" /> },
     { id: 'laporan', label: 'Trafik Jaringan & Laporan', icon: <Activity className="w-5 h-5" /> },
+    { id: 'wabot', label: 'Konfigurasi WhatsApp Bot', icon: <MessageSquare className="w-5 h-5" /> },
+    { id: 'keamanan', label: 'Keamanan & Lupa Password', icon: <Lock className="w-5 h-5" /> },
   ];
 
   const renderContent = (id: string) => {
@@ -24,7 +27,7 @@ export default function GuidePage() {
           <div className="prose prose-invert max-w-none prose-slate">
             <div className="bg-blue-900/10 border-l-4 border-blue-500 p-5 rounded-r-xl mb-4">
               <p className="text-blue-100 text-lg leading-relaxed m-0">
-                <strong>{settings.appName}</strong> dirancang untuk menggantikan rutinitas rumit di Winbox. Dengan sistem ini, Anda bisa membuat voucher, mengatur harga, dan memantau pendapatan dari mana saja hanya melalui web browser.
+                <strong>{settings.appName}</strong> dirancang untuk menggantikan rutinitas rumit di Winbox. Dengan sistem ini, Anda bisa membuat voucher, mengatur harga, memantau pendapatan, hingga mengelola mitra jaringan dari mana saja hanya melalui web browser.
               </p>
             </div>
             
@@ -108,10 +111,6 @@ export default function GuidePage() {
                       <span>512 Kbps</span>
                       <code className="bg-[#0F172A] text-emerald-400 px-3 py-1.5 rounded text-sm">512k/512k</code>
                     </li>
-                    <li className="flex justify-between items-center border-b border-slate-700/50 pb-3">
-                      <span>Up 1Mb / Down 2Mb</span>
-                      <code className="bg-[#0F172A] text-emerald-400 px-3 py-1.5 rounded text-sm">1M/2M</code>
-                    </li>
                     <li className="flex justify-between items-center pt-2">
                       <span className="text-blue-400">Tanpa Batas (Unlimited)</span>
                       <span className="italic bg-blue-900/30 text-blue-300 px-3 py-1.5 rounded border border-blue-800 text-sm">Kosongkan Kolom</span>
@@ -126,7 +125,7 @@ export default function GuidePage() {
                   <div className="flex items-start gap-3">
                     <div className="text-purple-400 font-bold shrink-0 mt-0.5 text-lg leading-none">•</div>
                     <div className="text-sm text-slate-400">
-                      <strong className="text-white">Shared Users:</strong> Angka ini menentukan berapa banyak perangkat (HP/Laptop) yang bisa login menggunakan satu kode voucher yang sama secara bersamaan (Isi 1 untuk satu perangkat).
+                      <strong className="text-white">Shared Users:</strong> Angka ini menentukan berapa banyak perangkat (HP/Laptop) yang bisa login menggunakan satu kode voucher yang sama secara bersamaan.
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -140,11 +139,41 @@ export default function GuidePage() {
             </div>
           </div>
         );
+      case 'klien':
+        return (
+          <div className="prose prose-invert max-w-none prose-slate">
+            <p className="text-slate-300 text-base">
+              Aplikasi ini mendukung sistem Multi-Tenant (Multi-Mitra). Artinya, Anda sebagai <strong>ADMIN Utama</strong> bisa membuatkan akun untuk para penjaga toko, agen, atau mitra (Role: USER).
+            </p>
+            <div className="bg-slate-900/50 border border-slate-700/50 p-5 rounded-xl mt-5">
+              <h3 className="text-white text-base font-bold mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-400" /> Alur Kerja Sistem Mitra
+              </h3>
+              <div className="space-y-4" style={{ marginLeft: '31px' }}>
+                <div className="flex items-start gap-3">
+                  <div className="font-bold text-blue-400 text-base shrink-0">1.</div>
+                  <p className="text-sm text-slate-300 mb-0"><strong>Membuat Akun Mitra:</strong> Buka menu <strong className="text-white">User</strong>, klik Tambah User. Isi Username, Password, dan pilih tipe Role <code>USER</code>.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="font-bold text-blue-400 text-base shrink-0">2.</div>
+                  <p className="text-sm text-slate-300 mb-0"><strong>Mitra Memesan Voucher:</strong> Mitra login menggunakan akunnya, lalu memesan voucher melalui menu <strong className="text-white">Beli Voucher</strong>.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="font-bold text-blue-400 text-base shrink-0">3.</div>
+                  <p className="text-sm text-slate-300 mb-0"><strong>Admin Memproses Pesanan:</strong> Admin (Anda) akan melihat notifikasi pesanan di menu <strong className="text-white">Pesanan Masuk</strong>. Klik tombol Centang Hijau untuk meng-generate dan mengirim voucher secara otomatis ke akun mitra tersebut.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="font-bold text-blue-400 text-base shrink-0">4.</div>
+                  <p className="text-sm text-slate-300 mb-0"><strong>Mitra Menerima Voucher:</strong> Mitra akan melihat voucher yang sudah diproses di menu <strong className="text-white">Data Voucher</strong> mereka dan siap dicetak/dijual.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
       case 'voucher':
         return (
           <div className="prose prose-invert max-w-none prose-slate">
             <div className="mt-5 space-y-8 pb-2">
-              
               <div className="flex items-start gap-3">
                 <div className="font-bold text-white text-base shrink-0 mt-0.5">1.</div>
                 <div>
@@ -164,23 +193,12 @@ export default function GuidePage() {
               <div className="flex items-start gap-3">
                 <div className="font-bold text-white text-base shrink-0 mt-0.5">3.</div>
                 <div>
-                  <h3 className="text-white text-base font-bold m-0 mb-2">Mode "Username = Password"</h3>
-                  <p className="text-slate-400 text-sm mb-0">
-                    Aktifkan fitur ini jika Anda ingin pelanggan hanya perlu memasukkan 1 kode untuk masuk. 
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="font-bold text-white text-base shrink-0 mt-0.5">4.</div>
-                <div>
                   <h3 className="text-white text-base font-bold m-0 mb-2">Proses & Cetak (Print)</h3>
                   <p className="text-slate-400 text-sm mb-0">
                     Setelah ditekan "Generate", tekan tombol <strong className="text-white bg-slate-800 px-3 py-1.5 rounded">Cetak (Print) Terbaru</strong>. Layar pencetakan akan terbuka.
                   </p>
                 </div>
               </div>
-
             </div>
           </div>
         );
@@ -194,7 +212,7 @@ export default function GuidePage() {
               <div className="space-y-3 mb-0 mt-4" style={{ marginLeft: '32px' }}>
                 <div className="flex items-start gap-3">
                   <div className="text-slate-400 font-bold shrink-0 mt-0.5 text-lg leading-none">•</div>
-                  <div className="text-sm text-slate-300"><strong>Total Pendapatan:</strong> Merupakan akumulasi seluruh voucher aktif yang pernah di-generate dikalikan harganya.</div>
+                  <div className="text-sm text-slate-300"><strong>Total Pendapatan:</strong> Merupakan akumulasi seluruh voucher aktif yang pernah di-generate dikalikan harganya. Semua data disinkronisasi langsung dari database MikroTik.</div>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="text-slate-400 font-bold shrink-0 mt-0.5 text-lg leading-none">•</div>
@@ -212,18 +230,76 @@ export default function GuidePage() {
                   <h4 className="font-bold text-red-400 mb-2 flex items-center gap-2 text-sm">
                     <span className="w-2 h-2 rounded-full bg-red-500"></span> Rx (Download)
                   </h4>
-                  <p className="text-xs text-slate-400 mb-0 leading-relaxed" style={{ marginLeft: '16px' }}>Menunjukkan beban koneksi yang digunakan pelanggan Anda untuk mengunduh data.</p>
+                  <p className="text-xs text-slate-400 mb-0 leading-relaxed" style={{ marginLeft: '16px' }}>Beban koneksi yang diunduh pelanggan dari internet.</p>
                 </div>
                 <div className="bg-[#0F172A] border border-slate-700/50 p-4 rounded-xl">
                   <h4 className="font-bold text-blue-400 mb-2 flex items-center gap-2 text-sm">
                     <span className="w-2 h-2 rounded-full bg-blue-500"></span> Tx (Upload)
                   </h4>
-                  <p className="text-xs text-slate-400 mb-0 leading-relaxed" style={{ marginLeft: '16px' }}>Menunjukkan beban unggah jaringan Anda.</p>
+                  <p className="text-xs text-slate-400 mb-0 leading-relaxed" style={{ marginLeft: '16px' }}>Beban data yang diunggah pelanggan ke internet.</p>
                 </div>
               </div>
-              <p className="text-xs text-slate-400 italic mb-0" style={{ marginLeft: '32px' }}>
-                Catatan: Monitor akan terus mengulang pengecekan setiap 2 detik. Jika koneksi putus, grafik otomatis mendeteksi error.
-              </p>
+            </div>
+          </div>
+        );
+      case 'wabot':
+        return (
+          <div className="prose prose-invert max-w-none prose-slate">
+            <p className="text-slate-300 text-base">
+              Aplikasi ini dilengkapi dengan Bot WhatsApp terintegrasi yang berfungsi mengirimkan notifikasi penting seperti Token Reset Password atau Notifikasi Pembelian Voucher.
+            </p>
+            <div className="bg-green-900/10 border-l-4 border-green-500 p-5 mt-5">
+              <h4 className="text-green-400 font-bold m-0 flex items-center gap-2 text-base"><MessageSquare className="w-5 h-5" /> Cara Mengaktifkan Bot WA</h4>
+              <div className="space-y-4 mt-4" style={{ marginLeft: '28px' }}>
+                <div className="flex items-start gap-3">
+                  <div className="font-bold text-green-400 text-base shrink-0 mt-0.5">1.</div>
+                  <p className="text-sm text-slate-300 mb-0">Buka menu <strong>WA Bot</strong> di sidebar.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="font-bold text-green-400 text-base shrink-0 mt-0.5">2.</div>
+                  <p className="text-sm text-slate-300 mb-0">Klik tombol <strong>Mulai Bot WA</strong> dan tunggu beberapa saat hingga QR Code muncul.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="font-bold text-green-400 text-base shrink-0 mt-0.5">3.</div>
+                  <p className="text-sm text-slate-300 mb-0">Buka aplikasi WhatsApp di HP Anda, buka menu Perangkat Tertaut (Linked Devices), lalu arahkan kamera ke <strong>QR Code</strong> di layar.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="font-bold text-green-400 text-base shrink-0 mt-0.5">4.</div>
+                  <p className="text-sm text-slate-300 mb-0">Jika sukses, status akan berubah menjadi <strong className="text-green-400">Bot Terhubung!</strong> Sistem akan terus mengingat koneksi ini secara otomatis, bahkan saat komputer direstart.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      case 'keamanan':
+        return (
+          <div className="prose prose-invert max-w-none prose-slate">
+            <p className="text-slate-300 text-base">
+              Sistem telah dilengkapi dengan lapisan keamanan ganda untuk melindungi data akun dan kredensial akses (*Multi-device logout* & *WhatsApp Verification*).
+            </p>
+            <div className="grid grid-cols-1 gap-5 my-5">
+              <div className="bg-slate-800/40 p-5 rounded-2xl border border-slate-700">
+                <h4 className="text-white font-bold mb-3 flex items-center gap-2 text-base"><Lock className="w-5 h-5 text-red-400" /> Lupa Password & Reset Keamanan</h4>
+                <p className="text-sm text-slate-400 mb-4" style={{ marginLeft: '28px' }}>
+                  Jika Anda lupa password, Anda tidak akan mendapatkan password secara langsung di layar demi mencegah pembajakan akun oleh orang asing.
+                </p>
+                <div className="bg-[#0F172A] border border-slate-700/50 p-4 rounded-xl" style={{ marginLeft: '28px' }}>
+                  <p className="text-sm text-slate-300 mb-2"><strong>Langkah Pemulihan:</strong></p>
+                  <ol className="text-sm text-slate-400 space-y-2 list-decimal list-inside m-0 pl-1">
+                    <li>Klik <strong>Lupa Password?</strong> di halaman Login.</li>
+                    <li>Masukkan Username dan Nomor WhatsApp yang terdaftar.</li>
+                    <li>Sistem akan memvalidasi data dan mengirimkan sebuah <strong>Link Token Rahasia</strong> ke nomor WhatsApp Anda (via WA Bot).</li>
+                    <li>Link tersebut hanya berlaku selama <strong>15 Menit</strong> dan hanya dapat ditekan <strong>Satu Kali</strong>.</li>
+                    <li>Klik link tersebut, isi password baru Anda, dan akun akan kembali dapat diakses.</li>
+                  </ol>
+                </div>
+              </div>
+              <div className="bg-slate-800/40 p-5 rounded-2xl border border-slate-700">
+                <h4 className="text-white font-bold mb-3 flex items-center gap-2 text-base"><Shield className="w-5 h-5 text-emerald-400" /> Perlindungan Ganda (Multi-Device)</h4>
+                <p className="text-sm text-slate-400 mb-0" style={{ marginLeft: '28px' }}>
+                  Setiap kali password Anda berhasil diubah, atau jika ada login baru yang sukses dari perangkat lain, sistem akan otomatis melakukan <strong>Log Out paksa (Force Logout)</strong> pada semua sesi perangkat Anda yang lama. Hal ini menjamin bahwa tidak ada perangkat yang masih bisa mengakses akun Anda tanpa izin setelah penggantian password.
+                </p>
+              </div>
             </div>
           </div>
         );
@@ -239,9 +315,9 @@ export default function GuidePage() {
           <BookOpen className="w-7 h-7 text-blue-500" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Panduan Penggunaan</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Panduan Penggunaan Lengkap</h1>
           <p className="text-[13px] text-slate-400 mt-2 font-medium">
-            Dokumentasi resmi dan cara pakai sistem {settings.appName}
+            Dokumentasi fitur dan cara pakai sistem {settings.appName}
           </p>
         </div>
       </div>
@@ -280,7 +356,7 @@ export default function GuidePage() {
       <div className="mt-8 flex items-start gap-3 bg-blue-900/10 p-4 rounded-xl border border-blue-800/20">
         <HelpCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
         <p className="text-xs text-blue-200/70 leading-relaxed">
-          Jika Anda mengalami kendala yang tidak ada di panduan ini, silakan hubungi tim teknis atau administrator sistem utama.
+          Jika Anda mengalami kendala yang tidak ada di panduan ini, silakan hubungi tim teknis atau administrator sistem utama. Panduan ini mencakup pembaruan sistem terbaru v2.0.
         </p>
       </div>
     </div>

@@ -129,6 +129,7 @@ export function EditUserForm({ user }: { user: any }) {
                 required
                 className="w-full bg-[#0b1220] border border-slate-700 rounded-xl h-12 px-4 text-[13px] text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 appearance-none"
               >
+                {user.role === 'SUPERADMIN' && <option value="SUPERADMIN">Super Administrator</option>}
                 <option value="ADMIN">Administrator</option>
                 <option value="USER">User</option>
               </select>

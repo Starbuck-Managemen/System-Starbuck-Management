@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma"
 import { getHotspotProfiles, addHotspotProfile, updateHotspotProfile, deleteHotspotProfile } from "@/lib/mikrotik"
 import { revalidatePath } from "next/cache"
+import { auth } from "@/auth"
 
 export async function getProfilesWithPrice(routerId: string) {
   if (!routerId) return { success: false, data: [] }
@@ -40,6 +41,9 @@ export async function saveProfilePrice(routerId: string, name: string, price: nu
   }
   
   try {
+    const session = await auth()
+    const userId = session?.user?.id
+
     await prisma.profile.upsert({
       where: {
         routerId_name: {
@@ -48,12 +52,14 @@ export async function saveProfilePrice(routerId: string, name: string, price: nu
         }
       },
       update: {
-        price
+        price,
+        ...(userId ? { userId } : {})
       },
       create: {
         routerId,
         name,
-        price
+        price,
+        ...(userId ? { userId } : {})
       }
     })
     
@@ -80,11 +86,22 @@ export async function createProfileAction(
   
   if (!mkResult.success) return mkResult
 
+  const session = await auth()
+  const userId = session?.user?.id
+
   // 2. Simpan Harga ke Database
   await prisma.profile.upsert({
     where: { routerId_name: { routerId, name: data.name } },
-    update: { price: data.price },
-    create: { routerId, name: data.name, price: data.price }
+    update: { 
+      price: data.price,
+      ...(userId ? { userId } : {})
+    },
+    create: { 
+      routerId, 
+      name: data.name, 
+      price: data.price,
+      ...(userId ? { userId } : {})
+    }
   })
   
   revalidatePath("/dashboard/profile")
@@ -107,6 +124,9 @@ export async function editProfileAction(
   
   if (!mkResult.success) return mkResult
 
+  const session = await auth()
+  const userId = session?.user?.id
+
   // 2. Update Harga di Database
   // Pertama, update record lama jika namanya berubah
   if (oldName !== data.name) {
@@ -117,19 +137,36 @@ export async function editProfileAction(
     if (existingDb) {
       await prisma.profile.update({
         where: { id: existingDb.id },
-        data: { name: data.name, price: data.price }
+        data: { 
+          name: data.name, 
+          price: data.price,
+          ...(userId ? { userId } : {})
+        }
       })
     } else {
       await prisma.profile.create({
-        data: { routerId, name: data.name, price: data.price }
+        data: { 
+          routerId, 
+          name: data.name, 
+          price: data.price,
+          ...(userId ? { userId } : {})
+        }
       })
     }
   } else {
     // Jika namanya tidak berubah, upsert saja
     await prisma.profile.upsert({
       where: { routerId_name: { routerId, name: data.name } },
-      update: { price: data.price },
-      create: { routerId, name: data.name, price: data.price }
+      update: { 
+        price: data.price,
+        ...(userId ? { userId } : {})
+      },
+      create: { 
+        routerId, 
+        name: data.name, 
+        price: data.price,
+        ...(userId ? { userId } : {})
+      }
     })
   }
   

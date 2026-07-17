@@ -44,3 +44,12 @@ next-env.d.ts
 .wwebjs_auth/  
 .wwebjs_cache/  
 public/uploads/ 
+
+# SSH Keys (Penting!)
+id_rsa_bucknet*
+id_ed25519_bucknet*
+
+# Arsip & Log Jalur Lokal
+*.tar.gz
+*.zip
+*.log

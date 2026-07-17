@@ -255,7 +255,7 @@ export async function deleteHotspotProfile(routerId: string, profileName: string
  */
 export async function generateVouchers(
   routerId: string, 
-  data: { server: string, profile: string, amount: number, length: number }
+  data: { server: string, profile: string, amount: number, length: number, limitUptime?: string }
 ) {
   let client
   try {
@@ -269,14 +269,19 @@ export async function generateVouchers(
     for (let i = 0; i < data.amount; i++) {
       const voucherCode = generateRandomString(data.length)
       
-      // Standar: username = password
-      await menu.add({
+      const userData: any = {
         server: data.server,
         name: voucherCode,
         password: voucherCode,
         profile: data.profile,
         comment: `buckNet-${batchId}` // Penanda batch untuk laporan
-      })
+      }
+
+      if (data.limitUptime && data.limitUptime.trim() !== "") {
+        userData["limit-uptime"] = data.limitUptime.trim()
+      }
+
+      await menu.add(userData)
       generatedVouchers.push(voucherCode)
       generated++
     }
@@ -295,7 +300,7 @@ export async function generateVouchers(
  */
 export async function addManualVoucher(
   routerId: string, 
-  data: { server: string, profile: string, name: string, password?: string, waNumber?: string, customerName?: string }
+  data: { server: string, profile: string, name: string, password?: string, waNumber?: string, customerName?: string, limitUptime?: string }
 ) {
   let client
   try {
@@ -315,13 +320,19 @@ export async function addManualVoucher(
       finalComment += `|Nama:${data.customerName}`
     }
     
-    await menu.add({
+    const userData: any = {
       server: data.server,
       name: data.name,
-      password: data.password || "",
+      password: data.password || data.name,
       profile: data.profile,
       comment: finalComment
-    })
+    }
+
+    if (data.limitUptime && data.limitUptime.trim() !== "") {
+      userData["limit-uptime"] = data.limitUptime.trim()
+    }
+
+    await menu.add(userData)
     
     return { success: true }
   } catch (error: any) {
@@ -341,19 +352,36 @@ export async function addManualVoucher(
 /**
  * Menghapus voucher (hotspot user) dari MikroTik
  */
-export async function deleteVoucher(routerId: string, voucherName: string) {
+export async function deleteVoucher(routerId: string, voucherIdOrName: string) {
   let client
   try {
     client = await getMikrotikClient(routerId)
+
+    // Coba hapus dari active list dulu
+    try {
+      const activeMenu = client.api().menu("/ip/hotspot/active")
+      if (!voucherIdOrName.startsWith('*')) {
+        const activeUsers = await activeMenu.where("user", voucherIdOrName).get()
+        if (activeUsers.length > 0) {
+          const id = activeUsers[0].id || activeUsers[0]['.id']
+          if (id) await activeMenu.remove(id)
+        }
+      }
+    } catch (e) {}
+
     const menu = client.api().menu("/ip/hotspot/user")
     
-    // Cari id internal mikrotik berdasarkan nama voucher
-    const users = await menu.where("name", voucherName).get()
-    if (users.length > 0) {
-      const internalId = users[0].id || users[0]['.id']
-      if (internalId) {
-        await menu.remove(internalId)
-        return { success: true }
+    if (voucherIdOrName.startsWith('*')) {
+      await menu.remove(voucherIdOrName)
+      return { success: true }
+    } else {
+      const users = await menu.where("name", voucherIdOrName).get()
+      if (users.length > 0) {
+        const internalId = users[0].id || users[0]['.id']
+        if (internalId) {
+          await menu.remove(internalId)
+          return { success: true }
+        }
       }
     }
     

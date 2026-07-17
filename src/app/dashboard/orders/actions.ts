@@ -54,3 +54,23 @@ export async function rejectOrder(orderId: string, reason: string) {
     return { success: false, error: "Gagal menolak pesanan: " + error.message }
   }
 }
+
+export async function deleteOrder(orderId: string) {
+  const session = await auth()
+  
+  const admin = await prisma.user.findUnique({ where: { email: session?.user?.email || "" }})
+  if (admin?.role !== 'ADMIN' && admin?.role !== 'SUPERADMIN') {
+    return { success: false, error: "Tidak diizinkan." }
+  }
+
+  try {
+    await prisma.order.delete({
+      where: { id: orderId }
+    })
+    
+    revalidatePath('/dashboard/orders')
+    return { success: true, message: "Pesanan berhasil dihapus!" }
+  } catch (error: any) {
+    return { success: false, error: "Gagal menghapus pesanan: " + error.message }
+  }
+}

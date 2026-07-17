@@ -19,6 +19,10 @@ function initClient(clientId) {
     console.log(`[WA] Initializing client for ${clientId}...`);
     const client = new Client({
         authStrategy: new LocalAuth({ clientId }),
+        webVersionCache: {
+            type: "remote",
+            remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html"
+        },
         puppeteer: {
             args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
         }
@@ -141,7 +145,7 @@ app.post('/send-wa', async (req, res) => {
             cleanNumber = '62' + cleanNumber.substring(1);
         }
         const formattedNumber = `${cleanNumber}@c.us`;
-        await client.sendMessage(formattedNumber, message);
+        await client.sendMessage(formattedNumber, message, { linkPreview: false });
         console.log(`✅ Pesan WA terkirim ke ${formattedNumber} via clientId ${clientId}`);
         res.json({ success: true });
     } catch (err) {
@@ -155,6 +159,7 @@ app.get('/contacts', async (req, res) => {
     if (!clientId || !sessions.has(clientId)) {
         return res.status(503).json({ error: 'WhatsApp Bot belum siap untuk pengguna ini.' });
     }
+
     const client = sessions.get(clientId);
     if (!client.info) {
         return res.status(503).json({ error: 'Client belum terhubung sepenuhnya.' });
@@ -193,4 +198,32 @@ app.listen(PORT, () => {
             // Abaikan error (contoh: Next.js sedang restart)
         }
     }, 15000);
+
+    // Auto-Delete expired vouchers polling every 15 minutes
+    setInterval(async () => {
+        try {
+            const token = process.env.CRON_SECRET || '';
+            const url = `http://127.0.0.1:3000/api/cron/auto-delete?token=${token}`;
+            await fetch(url);
+            console.log(`[CRON] Auto-Delete pinged at ${new Date().toISOString()}`);
+        } catch (e) {
+            // Abaikan error
+        }
+    }, 900000); // 15 menit
+
+    // Rental Reminder polling every 1 minute (runs exactly at 08:00)
+    setInterval(async () => {
+        try {
+            const now = new Date();
+            // Eksekusi tepat pada jam 08:00 pagi
+            if (now.getHours() === 8 && now.getMinutes() === 0) {
+                const token = process.env.CRON_SECRET || '';
+                const url = `http://127.0.0.1:3000/api/cron/rental-reminder?token=${token}`;
+                await fetch(url);
+                console.log(`[CRON] Rental Reminder triggered at ${now.toISOString()}`);
+            }
+        } catch (e) {
+            console.error(`[CRON] Rental Reminder Error:`, e);
+        }
+    }, 60000);
 });

@@ -1,5 +1,5 @@
 import { auth, signOut } from "@/auth"
-import { Home, Users, Ticket, Wifi, FileText, Settings, Search, Bell, Menu, Star, User, Tag, BookOpen, ShoppingCart, ClipboardList, MessageSquare } from "lucide-react"
+import { Home, Users, Ticket, Wifi, FileText, Settings, Search, Bell, Menu, Star, User, Tag, BookOpen, ShoppingCart, ClipboardList, MessageSquare, CreditCard } from "lucide-react"
 import Link from "next/link"
 import { UserNav } from "@/components/UserNav"
 import { Breadcrumb } from "@/components/Breadcrumb"
@@ -10,6 +10,8 @@ import { Toaster } from "sonner"
 import { SessionPing } from "@/components/SessionPing"
 import { ForceLogout } from "@/components/ForceLogout"
 import { getSettings } from "@/app/dashboard/settings/actions"
+import { redirect } from "next/navigation"
+import { ContactAdminButton } from "@/components/ContactAdminButton"
 
 import prisma from "@/lib/prisma"
 
@@ -41,10 +43,29 @@ export default async function DashboardLayout({
       return <ForceLogout message="Sesi Anda berakhir karena akun Anda baru saja login di perangkat lain." />
     }
   }
+
+  if (dbUser?.role === 'ADMIN') {
+    if (dbUser.subscriptionStatus === 'Expired' || dbUser.subscriptionStatus === 'Banned') {
+      redirect('/billing')
+    }
+    if (dbUser.subscriptionStatus === 'Trial' && dbUser.trialEndsAt && new Date() > dbUser.trialEndsAt) {
+      redirect('/billing')
+    }
+    if (dbUser.subscriptionStatus === 'Active' && dbUser.subscriptionEndsAt && new Date() > dbUser.subscriptionEndsAt) {
+      redirect('/billing')
+    }
+  }
   
   let hasRouters = true
   let pendingOrdersCount = 0
   let unreadOrdersCount = 0
+  
+  // Ambil nomor WA SuperAdmin untuk tombol bantuan
+  const superAdmin = await prisma.user.findFirst({
+    where: { role: 'SUPERADMIN' }
+  })
+  const superAdminPhone = superAdmin?.phone || null;
+
   if (dbUser?.role === 'ADMIN' || dbUser?.role === 'USER') {
     const targetUserId = dbUser?.role === 'USER' && dbUser?.adminId ? dbUser.adminId : dbUser?.id;
     const rCount = await prisma.router.count({ where: { userId: targetUserId } })
@@ -93,6 +114,19 @@ export default async function DashboardLayout({
             <Home className="h-[18px] w-[18px]" />
             <span className="font-semibold text-[13px]">Dashboard</span>
           </Link>
+
+          {dbUser?.role === 'SUPERADMIN' && (
+            <>
+              <Link href="/super-admin" className="flex items-center gap-3 rounded-xl px-4 py-3 text-emerald-400 transition-all hover:bg-[#1E293B] hover:text-emerald-300 focus:bg-emerald-600 focus:text-slate-50 border border-emerald-500/20 bg-emerald-500/10">
+                <Star className="h-[18px] w-[18px]" />
+                <span className="font-semibold text-[13px]">Super Admin Area</span>
+              </Link>
+              <Link href="/dashboard/billing" className="flex items-center gap-3 rounded-xl px-4 py-3 text-amber-400 transition-all hover:bg-[#1E293B] hover:text-amber-300 focus:bg-amber-600 focus:text-slate-50 border border-amber-500/20 bg-amber-500/10 mt-1.5">
+                <CreditCard className="h-[18px] w-[18px]" />
+                <span className="font-semibold text-[13px]">Tagihan & Layanan</span>
+              </Link>
+            </>
+          )}
           
           {showAdminMenus && (
             <Link href="/dashboard/user" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
@@ -146,7 +180,7 @@ export default async function DashboardLayout({
             </>
           )}
 
-          {showAdminMenus && (
+          {showUserMenus && (
             <Link href="/dashboard/report" className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-all hover:bg-[#1E293B] hover:text-slate-50 focus:bg-blue-600 focus:text-slate-50">
               <FileText className="h-[18px] w-[18px]" />
               <span className="font-semibold text-[13px]">Laporan</span>
@@ -209,6 +243,11 @@ export default async function DashboardLayout({
           <SessionPing />
         </main>
       </div>
+      
+      {/* Tombol Floating Hubungi Admin untuk User/Admin */}
+      {dbUser?.role !== 'SUPERADMIN' && (
+        <ContactAdminButton phone={superAdminPhone} />
+      )}
     </div>
   )
 }

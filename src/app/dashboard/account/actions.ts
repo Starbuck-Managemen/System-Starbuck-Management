@@ -63,7 +63,7 @@ export async function updateAccount(prevState: any, formData: FormData) {
   if (password && password.trim().length >= 6) {
     // Clear session in DB before signing out
     await prisma.user.update({
-      where: { id: user.id },
+      where: { id: userId },
       data: {
         lastActive: new Date(0),
         currentSessionToken: null

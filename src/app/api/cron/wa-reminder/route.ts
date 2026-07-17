@@ -114,6 +114,75 @@ export async function GET(request: Request) {
       }
     }
 
+    // ==========================================
+    // PENGINGAT TAGIHAN SUPERADMIN (BILLING)
+    // ==========================================
+    try {
+      const adminSetting = await prisma.setting.findUnique({
+        where: { key: 'SUPERADMIN_BILLING_REMINDERS' }
+      });
+
+      if (adminSetting && adminSetting.value) {
+        let billingItems = JSON.parse(adminSetting.value);
+        let updatedBillingItems = false;
+        
+        const superAdmin = await prisma.user.findFirst({
+          where: { role: 'SUPERADMIN' }
+        });
+        
+        const adminPhone = process.env.ADMIN_PHONE || superAdmin?.phone;
+
+        if (adminPhone && Array.isArray(billingItems)) {
+          for (let i = 0; i < billingItems.length; i++) {
+            const item = billingItems[i];
+            
+            if (item.isPaid || !item.dueDate) continue;
+
+            const due = new Date(item.dueDate).getTime();
+            const now = Date.now();
+            const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+            
+            const lastRemindedMs = item.lastReminded || 0;
+            const canRemindAgain = (now - lastRemindedMs) > 86400000;
+
+            if (diffDays <= 3 && diffDays >= -7 && canRemindAgain) {
+               const timeStr = diffDays > 0 ? `*H-${diffDays}* (Jatuh Tempo)` : diffDays === 0 ? `*HARI INI* (Jatuh Tempo)` : `*TELAT ${Math.abs(diffDays)} HARI*`;
+               
+               const message = `⚠️ *PENGINGAT TAGIHAN LAYANAN*\n\nHalo Admin,\nTagihan untuk layanan *${item.name}* akan segera tiba:\n\n💳 Nominal: Rp ${new Intl.NumberFormat('id-ID').format(item.amount)}\n⏳ Status: ${timeStr}\n\nSilakan cek detailnya di menu Tagihan & Layanan pada STARBUCK Manager.`;
+
+               try {
+                 const waResponse = await fetch('http://127.0.0.1:3001/send-wa', {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'application/json' },
+                   body: JSON.stringify({ clientId: superAdmin?.id || 'superadmin', number: adminPhone, message })
+                 });
+
+                 if (waResponse.ok) {
+                    logs.push(`Sukses mengirim pengingat tagihan ${item.name} ke Admin (${adminPhone})`);
+                    item.lastReminded = now;
+                    updatedBillingItems = true;
+                    totalSent++;
+                 } else {
+                    logs.push(`Gagal API WA tagihan ${item.name}`);
+                 }
+               } catch (err) {
+                 logs.push(`Bot WA Offline kirim tagihan ${item.name}`);
+               }
+            }
+          }
+
+          if (updatedBillingItems) {
+            await prisma.setting.update({
+              where: { key: 'SUPERADMIN_BILLING_REMINDERS' },
+              data: { value: JSON.stringify(billingItems) }
+            });
+          }
+        }
+      }
+    } catch (e: any) {
+      logs.push(`Gagal memproses pengingat tagihan: ${e.message}`);
+    }
+
     return NextResponse.json({
       success: true,
       message: "Patroli WA Selesai!",

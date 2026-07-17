@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Users, Ticket, Wifi, FileText, Menu, Star, Tag, BookOpen, ShoppingCart, ClipboardList, X, MessageSquare } from "lucide-react"
+import { Home, Users, Ticket, Wifi, FileText, Menu, Star, Tag, BookOpen, ShoppingCart, ClipboardList, X, MessageSquare, CreditCard } from "lucide-react"
 
 interface MobileSidebarProps {
   dbUser: any;
@@ -21,6 +21,9 @@ export function MobileSidebar({ dbUser, pendingOrdersCount, unreadOrdersCount, h
   const closeMenu = () => setIsOpen(false)
 
   const isActive = (path: string) => pathname === path
+
+  const showAdminMenus = dbUser?.role === 'SUPERADMIN' || (dbUser?.role === 'ADMIN' && hasRouters);
+  const showUserMenus = (dbUser?.role !== 'ADMIN' && dbUser?.role !== 'SUPERADMIN') || showAdminMenus;
 
   return (
     <>
@@ -52,7 +55,20 @@ export function MobileSidebar({ dbUser, pendingOrdersCount, unreadOrdersCount, h
                 <span className="font-semibold text-[13px]">Dashboard</span>
               </Link>
               
-              {(dbUser?.role === 'SUPERADMIN' || (dbUser?.role === 'ADMIN' && hasRouters)) && (
+              {dbUser?.role === 'SUPERADMIN' && (
+                <>
+                  <Link href="/super-admin" onClick={closeMenu} className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all border border-emerald-500/20 ${isActive('/super-admin') ? 'bg-emerald-600 text-white' : 'bg-emerald-500/10 text-emerald-400 hover:bg-[#1E293B] hover:text-emerald-300'}`}>
+                    <Star className="h-[18px] w-[18px]" />
+                    <span className="font-semibold text-[13px]">Super Admin Area</span>
+                  </Link>
+                  <Link href="/dashboard/billing" onClick={closeMenu} className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all border border-amber-500/20 mt-1.5 ${isActive('/dashboard/billing') ? 'bg-amber-600 text-white' : 'bg-amber-500/10 text-amber-400 hover:bg-[#1E293B] hover:text-amber-300'}`}>
+                    <CreditCard className="h-[18px] w-[18px]" />
+                    <span className="font-semibold text-[13px]">Tagihan & Layanan</span>
+                  </Link>
+                </>
+              )}
+              
+              {showAdminMenus && (
                 <Link href="/dashboard/user" onClick={closeMenu} className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all ${isActive('/dashboard/user') ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-[#1E293B] hover:text-white'}`}>
                   <Users className="h-[18px] w-[18px]" />
                   <span className="font-semibold text-[13px]">User</span>
@@ -71,7 +87,7 @@ export function MobileSidebar({ dbUser, pendingOrdersCount, unreadOrdersCount, h
                 </Link>
               )}
 
-              {(dbUser?.role !== 'ADMIN' || hasRouters) && (
+              {showUserMenus && (
                 <Link href="/dashboard/voucher" onClick={closeMenu} className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all ${isActive('/dashboard/voucher') ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-[#1E293B] hover:text-white'}`}>
                   <Ticket className="h-[18px] w-[18px]" />
                   <span className="font-semibold text-[13px]">Data Voucher</span>
@@ -84,7 +100,7 @@ export function MobileSidebar({ dbUser, pendingOrdersCount, unreadOrdersCount, h
                     <Wifi className="h-[18px] w-[18px]" />
                     <span className="font-semibold text-[13px]">Router</span>
                   </Link>
-                  {(dbUser?.role === 'SUPERADMIN' || (dbUser?.role === 'ADMIN' && hasRouters)) && (
+                  {(showAdminMenus) && (
                     <>
                       <Link href="/dashboard/profile" onClick={closeMenu} className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all ${isActive('/dashboard/profile') ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-[#1E293B] hover:text-white'}`}>
                         <Tag className="h-[18px] w-[18px]" />
@@ -104,7 +120,7 @@ export function MobileSidebar({ dbUser, pendingOrdersCount, unreadOrdersCount, h
                 </>
               )}
 
-              {(dbUser?.role === 'SUPERADMIN' || (dbUser?.role === 'ADMIN' && hasRouters)) && (
+              {showUserMenus && (
                 <Link href="/dashboard/report" onClick={closeMenu} className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all ${isActive('/dashboard/report') ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-[#1E293B] hover:text-white'}`}>
                   <FileText className="h-[18px] w-[18px]" />
                   <span className="font-semibold text-[13px]">Laporan</span>
@@ -118,7 +134,7 @@ export function MobileSidebar({ dbUser, pendingOrdersCount, unreadOrdersCount, h
                 </Link>
               )}
               
-              {(dbUser?.role === 'SUPERADMIN' || (dbUser?.role === 'ADMIN' && hasRouters)) && (
+              {showAdminMenus && (
                 <Link href="/dashboard/guide" onClick={closeMenu} className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all ${isActive('/dashboard/guide') ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-[#1E293B] hover:text-white'}`}>
                   <BookOpen className="h-[18px] w-[18px]" />
                   <span className="font-semibold text-[13px]">Panduan Penggunaan</span>

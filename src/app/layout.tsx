@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 import { Toaster } from 'sonner';
+import Script from 'next/script';
 
 import { getSettings } from "@/app/dashboard/settings/actions";
 
@@ -29,6 +30,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isProd = process.env.MIDTRANS_IS_PRODUCTION === 'true';
+  const midtransUrl = isProd 
+    ? "https://app.midtrans.com/snap/snap.js"
+    : "https://app.sandbox.midtrans.com/snap/snap.js";
+
   return (
     <html
       lang="en"
@@ -37,6 +43,11 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         {children}
         <Toaster position="bottom-right" richColors />
+        <Script 
+          src={midtransUrl} 
+          data-client-key={process.env.MIDTRANS_CLIENT_KEY || 'SB-Mid-client-YOUR_CLIENT_KEY'} 
+          strategy="beforeInteractive"
+        />
       </body>
     </html>
   );
